@@ -6,7 +6,7 @@ Rascunho de estrategia baseado no operacional descrito:
 2. **Liquidez:** entrada na varredura de um fundo/topo anterior (pavio passa o nivel e o candle fecha de volta).
 3. **Volume:** exige volume acima da media (no CFD e tick volume, nao volume real).
 4. **Risco:** risco fixo em US$ por trade, stop alem do pavio + folga de ATR, alvo em multiplo de R, maximo de trades por dia, perda diaria maxima e corte total.
-5. **Horario:** 06:00-23:20 (Brasilia), seg-sex.
+5. **Horario:** padrao 06:00-23:20 (Brasilia), seg-sex; ajustavel/desligavel nos Inputs (o projeto nao usa mais janela fixa).
 
 ## Como testar
 1. TradingView > Pine Editor > cole `nas100_macro_liquidez.pine` > Add to chart.

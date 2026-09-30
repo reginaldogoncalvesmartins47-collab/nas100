@@ -22,6 +22,7 @@
 - [x] Objetivo lucro + quem decide + veredito `ready` para a conta real (docs/decisoes-e-objetivo.md)
 - [x] Gatilho de entrada em M5 (`entry-check`) e execucao pelo Claude (docs/execucao.md); capital US$ 30
 - [x] Plano de custo em tokens (docs/custo-tokens.md)
+- [x] Sem janela de horario fixa (trabalha enquanto a usuaria mantiver ligado)
 - [ ] Medir o consumo de tokens no 1o dia de demo (/cost) e decidir frequencia/modelo
 - [ ] Teste de aceitacao da execucao no Paper Trading (primeiro marco no PC da usuaria)
 - [ ] Calibrar o criterio de pavio em M5 com exemplos OHLC da usuaria

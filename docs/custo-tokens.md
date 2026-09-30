@@ -13,8 +13,14 @@ A primeira tarefa e MEDIR (secao 4).
 - Teste em fases: **Fase A** = janela curta por dia na demo (ex.: 1-2 h) medindo consumo; **Fase B** = ampliar so se couber.
 - Medir: comandos `/cost` e `/usage` do Claude Code (conferir o que cada um mostra na versao dela).
 
+### Sem janela fixa e aprendizado rapido
+A usuaria quer operar o maximo de tempo no comeco para aprender rapido, e o sistema nao para as 23h. Mais horas = mais consumo,
+entao o limite do Pro passa a mandar no ritmo. Regras: cadencia adaptativa (30 min de base; 5 min so com regiao proxima, trade
+aberto ou choque); acompanhar `/usage`; se o limite estiver acabando, **nao abrir novas entradas** (stops ficam no broker).
+O que acelera o aprendizado e o numero de **trades bem registrados**, nao so as horas ligadas.
+
 ## 1. O que faz o consumo subir
-- **Checar de 5 em 5 minutos com o Claude** durante 06:00-23:20 sao ~200 checagens por dia. Se cada uma exigir ler regras,
+- **Checar de 5 em 5 minutos com o Claude** durante 06:00-23:20 eram ~200 checagens por dia; **sem janela fixa (24 h de mercado aberto) sao ~288 por dia de 5 em 5 min, ou ~48 de 30 em 30 min**. Se cada uma exigir ler regras,
   ler velas de varios pares e raciocinar, o total diario vira milhoes de tokens (ordem de grandeza, nao medido).
 - **Sessao unica que nunca termina:** a conversa cresce e o contexto inteiro e reenviado a cada passo (com desconto de cache,
   mas cresce). Sessao longa = custo crescente.

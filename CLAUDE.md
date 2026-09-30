@@ -24,7 +24,7 @@ capital, stop obrigatorio ou o gate do modo real. Veredito para a conta real: `p
 - Direcao macro vem do usuario (painel proprio e leitura de Brent, juros, ES, calendario, geopolitica).
 - Entrada: regiao pontuada (liquidez + Fibo H1 + oferta/demanda) e o GATILHO e o mercado em M5: o preco chega na regiao, mostra
   rejeicao de pavio a favor do vies e o candle fecha sem romper a regiao (`entry-check`). Esperar o candle FECHAR; nao antecipar.
-- Horario de operacao: 06:00-23:20 (Brasilia), seg-sex.
+- Sem janela de horario fixa: o sistema trabalha enquanto a usuaria o mantiver ligado (mercado aberto). Acompanhar o limite de uso do plano.
 
 ## Antes de qualquer entrada (ordem)
 1. calendario do dia (Investing, pela extensao) -> 2. noticias na janela (dom/seg desde sexta 16h BRT; ter-sex 24h)

@@ -1,7 +1,6 @@
 {
   "_status": "RASCUNHO: todos os numeros sao hipoteses a calibrar com dados. Modo: somente sinal, sem ordens.",
   "instrument": "PEPPERSTONE:NAS100",
-  "session_brt": "06:00-23:20",
   "days": "seg-sex",
   "bias_source": "usuario (macro do dia: Brent, juros, ES, calendario, geopolitica)",
   "regions": {
@@ -523,5 +522,11 @@
     "never_trade_off": "stop no broker e limites de capital",
     "watcher_script": "ainda nao existe (depende de como os precos chegam ao script)",
     "user_plan": "Pro (limite de uso, nao por token); risco de estourar o limite com checagem continua; testar em fases (A: janela curta; B: ampliar)"
+  },
+  "operating_window": {
+    "rule": "SEM janela fixa: o sistema trabalha enquanto a usuaria o mantiver ligado (ela liga e desliga o PC). No comeco, quanto mais tempo de mercado com trades registrados, mais rapido o aprendizado.",
+    "days": "dias em que o mercado do NAS100 na Pepperstone estiver aberto (confirmar horarios e a pausa diaria com a corretora)",
+    "limit_awareness": "o limite de uso do plano Pro pode interromper o Claude; stops ficam no broker; acompanhar `/usage` e, se estiver acabando, nao abrir novas entradas",
+    "pine_note": "os scripts Pine trazem 06:00-23:20 como padrao de sessao; ajustar/desligar nos Inputs"
   }
 }
