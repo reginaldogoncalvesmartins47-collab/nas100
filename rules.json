@@ -7,9 +7,24 @@
   "regions": {
     "tf_primary": "H1",
     "tf_refine": "M15",
-    "fib_levels": [0.236, 0.382, 0.5, 0.618, 0.786],
+    "fib_levels": [
+      0.236,
+      0.382,
+      0.5,
+      0.618,
+      0.786
+    ],
     "fib_anchor": "pivos do H1 no ultimo leg que quebrou estrutura (H)",
-    "liquidity": ["PDH", "PDL", "PWH", "PWL", "ASIA_HL", "LONDON_HL", "EQH", "EQL"],
+    "liquidity": [
+      "PDH",
+      "PDL",
+      "PWH",
+      "PWL",
+      "ASIA_HL",
+      "LONDON_HL",
+      "EQH",
+      "EQL"
+    ],
     "cluster_width_atr_h1": 0.3,
     "score": {
       "fib_h1_level": 1,
@@ -28,7 +43,12 @@
   "optional_factors": {
     "smc_luxalgo": {
       "enabled": false,
-      "factors": ["order_block", "premium_discount", "choch_bos", "eqh_eql"],
+      "factors": [
+        "order_block",
+        "premium_discount",
+        "choch_bos",
+        "eqh_eql"
+      ],
       "note": "Requer versao derivada com saidas numericas (licenca CC BY-NC-SA 4.0, uso pessoal, manter atribuicao)."
     }
   },
@@ -39,6 +59,7 @@
   },
   "entry_gate": {
     "all_required": [
+      "gate_0_calendar: calendario do dia analisado",
       "region_score >= minimo (com ou contra a macro)",
       "reacao do mercado na regiao (varredura valida + fechamento de volta, ou confirmacao definida pelo usuario)",
       "RR ate a proxima liquidez oposta >= 2",
@@ -48,5 +69,24 @@
     "against_macro": "nota maior, risco menor, saida curta (ex.: meio do range)"
   },
   "risk_ref": "docs/regras-risco.md",
-  "mode": "signal_only"
+  "mode": "signal_only",
+  "gate_0_calendar": {
+    "rule": "ANTES de qualquer entrada do dia, analisar o calendario economico. Sem analise do calendario feita hoje, nao ha sinal (falha fechada).",
+    "doc": "docs/analise-calendario.md",
+    "must_cover": [
+      "eventos do dia em horario de Brasilia: pais, impacto, anterior, consenso, (realizado depois)",
+      "eventos dos EUA que movem o NAS: CPI, PCE, NFP, FOMC/atas/falas do Fed, PIB, ISM, vendas no varejo, pedidos de seguro-desemprego, leiloes do Tesouro",
+      "resultados de empresas gigantes de tecnologia/semicondutores e eventos de IA (afetam o NAS)",
+      "feriados e horarios reduzidos dos EUA",
+      "o que o mercado espera (consenso, probabilidades de juros, tom das noticias) e cenarios acima/em linha/abaixo",
+      "geopolitica e petroleo (Brent) do dia"
+    ],
+    "sources": "cruzar pelo menos 2 fontes; se divergirem ou faltarem dados, dizer e nao assumir",
+    "event_windows": {
+      "pre": "posicionamento do usuario permitido",
+      "event": "marcar como trade de evento; spread/slippage pior",
+      "post": "ler reacao vs consenso antes de novo sinal"
+    },
+    "output": "briefing do calendario (modelo em docs/analise-calendario.md)"
+  }
 }
