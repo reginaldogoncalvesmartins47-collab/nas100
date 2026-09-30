@@ -12,15 +12,18 @@ dos limites (tune), explica em portugues simples e pergunta so decisoes de negoc
 capital, stop obrigatorio ou o gate do modo real. Veredito para a conta real: `python scripts/calendar_db.py ready`.
 
 ## Regras que valem sempre
-- Conta real pequena (US$ 20): risco por trade e corte total estao em `docs/regras-risco.md`. Nao relaxar.
-- NAO executar ordens em conta real. Execucao em Paper Trading so com autorizacao explicita do usuario.
+- Conta real pequena (US$ 30; limites em dolares inalterados ate a usuaria dizer o contrario): risco por trade e corte total estao em `docs/regras-risco.md`. Nao relaxar.
+- **O Claude executa as ordens; a usuaria nao clica** (decisao dela, docs/execucao.md). Treino (Paper Trading): autorizado.
+  Conta real: so depois de `ready` cumprido + autorizacao escrita da usuaria dada UMA vez (nao por trade) + stop/alvo como
+  ordens na corretora + limites de capital ligados. Toda ordem nasce com stop e alvo.
 - Nao prometer resultado. Dizer quando nao ha setup. Resultados de backtest nao valem como prova.
 - Nao inventar dados de preco/volume: se o dado nao estiver disponivel, dizer.
 - Nao tocar em abas de corretora/banco ao usar o navegador.
 
 ## Metodo (resumo, detalhes em `docs/metodo.md`)
 - Direcao macro vem do usuario (painel proprio e leitura de Brent, juros, ES, calendario, geopolitica).
-- Entrada por varredura de liquidez (dia/semana anterior, Asia, Londres) a favor do vies.
+- Entrada: regiao pontuada (liquidez + Fibo H1 + oferta/demanda) e o GATILHO e o mercado em M5: o preco chega na regiao, mostra
+  rejeicao de pavio a favor do vies e o candle fecha sem romper a regiao (`entry-check`). Esperar o candle FECHAR; nao antecipar.
 - Horario de operacao: 06:00-23:20 (Brasilia), seg-sex.
 
 ## Antes de qualquer entrada (ordem)

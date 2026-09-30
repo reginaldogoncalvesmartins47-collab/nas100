@@ -11,7 +11,7 @@ A usuaria nao e tecnica e a prioridade dela e **o lucro**. Este documento fixa c
 ## O que "lucro como prioridade" significa aqui
 - Medida: **lucro liquido depois dos custos** (spread/slippage), em **R por trade** (R = o que se arrisca em cada trade).
 - **Nunca** se busca lucro afrouxando o que protege o capital: limites de risco, stop obrigatorio e o gate do modo real.
-  Com conta de US$ 20, sobreviver e pre-condicao para lucrar.
+  Com conta de US$ 30, sobreviver e pre-condicao para lucrar.
 - Nao ha garantia de lucro. A maioria dos operadores de varejo perde dinheiro; a demo existe para descobrir, sem custo,
   se este metodo tem vantagem.
 

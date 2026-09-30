@@ -23,7 +23,7 @@ correlacionados com cada noticia.
   plano com **direcao (compra ou venda)**, regiao/entrada e stop (`add-plan --stance compra|venda`). Continua sujeito
   aos limites de risco (`docs/regras-risco.md`). O sistema so sinaliza; quem executa e a usuaria.
   Atencao (registrada para a usuaria decidir): posicionar sempre, mesmo sem vantagem clara, aumenta o numero de trades
-  e o risco de slippage em evento; a conta de US$ 20 e o lote minimo limitam o tamanho do stop.
+  e o risco de slippage em evento; a conta de US$ 30 e o lote minimo limitam o tamanho do stop.
 - O plano e criado **antes** do evento. Plano criado depois e gravado como **TARDIO** e **nao gera entrada pela manchete**.
 - Plano tardio nao conta como plano: o item continua **SEM PLANO** no briefing.
 - Depois do evento: ler a reacao do preco e dos correlacionados para **gerir/ajustar** o plano, nao para perseguir a manchete.

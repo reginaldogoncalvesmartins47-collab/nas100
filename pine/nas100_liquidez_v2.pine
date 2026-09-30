@@ -5,7 +5,7 @@
 // fecha de volta e reverte; entrada a favor do vies, stop atras do pavio,
 // alvo na proxima liquidez do lado oposto.
 // Use em PEPPERSTONE:NAS100, M5 ou M15. Nao testado: valide no Strategy Tester e em demo.
-strategy("NAS100 Liquidez v2", overlay=true, initial_capital=20, currency=currency.USD,
+strategy("NAS100 Liquidez v2", overlay=true, initial_capital=30, currency=currency.USD,
      default_qty_type=strategy.fixed, default_qty_value=0.01, calc_on_every_tick=false, max_bars_back=500)
 
 // ---------------- Inputs ----------------

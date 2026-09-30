@@ -17,7 +17,7 @@ Rascunho de estrategia baseado no operacional descrito:
 ## Limites conhecidos
 - E um **ponto de partida**: as regras exatas (janela do Brent, pivots, volume) foram assumidas e precisam ser ajustadas ao operacional real.
 - O backtest no TradingView nao simula spread/slippage reais da Pepperstone.
-- Se o lote minimo exigir risco maior que o configurado, o trade e ignorado (protecao da conta de US$ 20).
+- Se o lote minimo exigir risco maior que o configurado, o trade e ignorado (protecao da conta de US$ 30).
 - Noticias/geopolitica nao entram na regra; servem de filtro manual.
 - Nao executa ordens: gera sinais e alertas. Execucao automatica exige robo na plataforma da corretora.
 

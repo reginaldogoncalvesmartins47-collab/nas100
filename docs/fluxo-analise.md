@@ -11,7 +11,7 @@ Modo: somente sinal. O usuario executa. Numeros em `rules.json` sao hipoteses.
    - Nota da regiao vs minimo (3 a favor / 4 contra).
    - Reacao do mercado: varredura valida + fechamento de volta (ou confirmacao do usuario).
    - Alvo = proxima liquidez oposta; RR >= 2?
-   - Horario e limites de risco (lote minimo x stop na conta de US$ 20).
+   - Horario e limites de risco (lote minimo x stop na conta de US$ 30).
 4. **Saida:** "sem setup" (com o motivo) ou sinal com entrada, stop, alvo e nota. Nada de ordem automatica.
 5. **Registro:** gravar a decisao e os valores em `journal/diario_trades.csv` (inclusive os "sem setup").
 

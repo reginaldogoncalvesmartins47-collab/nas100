@@ -20,6 +20,8 @@
 - [x] Tempo grafico de execucao e saida: M5 (macro H1/H4, regioes H1 + refino M15)
 - [x] Auto-ajuste com limites: tune / tune-history / tune-revert (docs/auto-ajuste.md)
 - [x] Objetivo lucro + quem decide + veredito `ready` para a conta real (docs/decisoes-e-objetivo.md)
+- [x] Gatilho de entrada em M5 (`entry-check`) e execucao pelo Claude (docs/execucao.md); capital US$ 30
+- [ ] Teste de aceitacao da execucao no Paper Trading (primeiro marco no PC da usuaria)
 - [ ] Calibrar o criterio de pavio em M5 com exemplos OHLC da usuaria
 - [ ] Escolher e testar variantes de saida A/B/C/D na demo
 - [x] Choque de mercado (gap/vela enorme/FVG) + vies vencido no gate + sem limite de trades (docs/choque-de-mercado.md)
@@ -29,7 +31,7 @@
 - [ ] Ler backtest e lista de negociacoes; ajustar niveis/gatilho
 - [ ] Definir gatilho exato e criterio de volume (ver docs/metodo.md, secao A DEFINIR)
 - [ ] Conferir lote minimo/valor do ponto/margem do NAS100 na Pepperstone
-- [ ] Ativar Paper Trading (PEPPERSTONE:NAS100, saldo US$ 20) e registrar trades em journal/
+- [ ] Ativar Paper Trading (PEPPERSTONE:NAS100, saldo US$ 30) e registrar trades em journal/
 - [ ] Instalar Node/Git/Claude Code e o MCP local (docs/setup-mcp-local.md)
 - [ ] Checagem periodica (ex.: /loop 5m) com o grafico real, somente sinalizando
 - [ ] 30-50 trades na demo; revisar diario semanalmente

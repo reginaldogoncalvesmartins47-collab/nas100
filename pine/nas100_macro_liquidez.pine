@@ -3,7 +3,7 @@
 // Rascunho baseado no operacional descrito: direcao macro pelas correlacoes,
 // entrada na varredura de liquidez (topo/fundo anterior) com volume acima da media.
 // Use em PEPPERSTONE:NAS100, timeframe M5 ou M15. Teste em demo/Strategy Tester antes de qualquer uso real.
-strategy("NAS100 Macro + Liquidez", overlay=true, initial_capital=20, currency=currency.USD,
+strategy("NAS100 Macro + Liquidez", overlay=true, initial_capital=30, currency=currency.USD,
      default_qty_type=strategy.fixed, default_qty_value=0.01, calc_on_every_tick=false, max_bars_back=500)
 
 // ---------------- Inputs ----------------

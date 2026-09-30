@@ -24,6 +24,8 @@ Comandos:
   bias [--set alta|baixa|neutro --reason TXT]   vies do dia (mostra o atual; o choque o marca como VENCIDO)
   shock --o O --h H --l L --c C --atr A [--prev-close PC --atr-gap AH --h1 H2 --l1 L2]   detecta gap, vela enorme e FVG; abre CHOQUE e vence o vies
   shock-diagnose --id N --category C --cause TXT --confidence alta|media|baixa --bias-after alta|baixa|neutro   diagnostico rapido do choque
+  entry-check --zone-type demanda|oferta --zone-low L --zone-high H --o O --h H --l L --c C --atr A [--score S --bias B --target-low --target-high --risk-usd --usd-per-point --min-lot]
+                                    GATILHO de entrada em M5: toque na regiao + rejeicao de pavio a favor + fechou sem romper; calcula stop, alvo, RR e lote
   ready                             veredito em portugues simples: ja da para ir para a conta real? (criterios do treino)
   stats [--mode treino|real]        acerto, R medio, MFE, quanto devolveu, por motivo de saida e por estado do gate
   themes                            temas e ativos correlacionados (rules.json)
@@ -697,6 +699,51 @@ def cmd_ready(con, a):
         print("RESULTADO: AINDA NAO. Continue no treino; ir agora seria apostar, nao operar com vantagem comprovada.")
     print("(1R = o valor que voce arrisca em cada trade. Criterios sao escolhas minhas e podem ser mudadas por voce.)")
 
+def cmd_entry_check(con, a):
+    R = load_rules(); E = R.get("entry_trigger", {}); pr, bm = wick_cfg()
+    buf = E.get("stop_buffer_atr", 0.25); min_rr = E.get("min_rr", 1.5)
+    side = "compra" if a.zone_type == "demanda" else "venda"
+    bl = con.execute("SELECT * FROM bias_log ORDER BY at DESC, id DESC").fetchone()
+    bias = a.bias or (bl["bias"] if bl else "neutro")
+    with_bias = (side == "compra" and bias == "alta") or (side == "venda" and bias == "baixa")
+    min_score = R.get("regions", {}).get("min_score_with_macro" if with_bias else "min_score_against_macro", 3 if with_bias else 4)
+    rng = a.h - a.l
+    if rng <= 0: sys.exit("candle sem amplitude")
+    body = abs(a.c - a.o); up = a.h - max(a.o, a.c); lo = min(a.o, a.c) - a.l
+    if side == "compra":
+        touched = a.l <= a.zone_high; wick_ok = lo >= pr * rng and lo >= bm * body; held = a.c >= a.zone_low
+        stop = a.l - buf * a.atr
+    else:
+        touched = a.h >= a.zone_low; wick_ok = up >= pr * rng and up >= bm * body; held = a.c <= a.zone_high
+        stop = a.h + buf * a.atr
+    print(f"=== GATILHO M5 | regiao de {a.zone_type} {a.zone_low}-{a.zone_high} (nota {a.score}) | viés {bias.upper()} | lado {side.upper()} ===")
+    print(f"  tocou a regiao: {'SIM' if touched else 'nao'} | rejeicao de pavio a favor: {'SIM' if wick_ok else 'nao'} | fechou sem romper a regiao: {'SIM' if held else 'nao'}")
+    if not (touched and wick_ok and held):
+        print("  SEM GATILHO. O mercado ainda nao mostrou a reacao (nao antecipar; esperar o candle M5 fechar).")
+        if touched and not held: print("  atencao: fechou ALEM da regiao (rompimento): a regiao pode ter falhado.")
+        return
+    entry = a.c; dist = abs(entry - stop)
+    flags = []
+    if a.score is not None and a.score < min_score: flags.append(f"nota {a.score} abaixo do minimo {min_score} ({'a favor' if with_bias else 'contra/sem'} do viés): no treino entra e fica registrado; no real nao")
+    if not with_bias: flags.append("lado CONTRA o viés (ou viés neutro): exige nota maior, risco menor e saida curta")
+    print(f"  GATILHO PRESENTE: {side.upper()} | entrada ~{entry} | stop {stop:.1f} ({dist:.1f} pts)")
+    tgt_txt = ""
+    if a.target_low is not None and a.target_high is not None:
+        near = a.target_low if side == "compra" else a.target_high; rr = abs(near - entry) / dist
+        print(f"  alvo: borda proxima da regiao oposta {near} ({abs(near - entry):.1f} pts) | RR {rr:.2f}")
+        if rr < min_rr: flags.append(f"RR {rr:.2f} abaixo do minimo {min_rr}")
+        tgt_txt = f" --target1 {near} --zone-low {a.target_low} --zone-high {a.target_high}"
+    else: flags.append("sem regiao-alvo informada: definir antes de entrar")
+    if a.usd_per_point:
+        raw = a.risk_usd / (dist * a.usd_per_point); size = max(a.min_lot, round(raw / a.min_lot) * a.min_lot)
+        real_risk = size * dist * a.usd_per_point
+        print(f"  tamanho: {size:.2f} lote(s) | risco real nesse stop: US$ {real_risk:.2f} (alvo de risco US$ {a.risk_usd})")
+        if real_risk > a.risk_usd * 1.05: flags.append(f"o lote minimo faz o risco real (US$ {real_risk:.2f}) passar do alvo (US$ {a.risk_usd}); limite maximo por trade: US$ {risk_cfg()[0]}")
+        size_txt = f" --size {size:.2f} --risk-usd {min(real_risk, risk_cfg()[0]):.2f}"
+    else: size_txt = f" --risk-usd {a.risk_usd}"
+    for f in flags: print("  aviso:", f)
+    print(f"  registrar: open-trade --mode treino --side {side} --entry {entry} --stop {stop:.1f}{tgt_txt}{size_txt} --region-score {a.score} --bias {bias}")
+
 def cmd_stats(con, a):
     rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
     if not rows: print(f"sem trades fechados no modo {a.mode}"); return
@@ -775,6 +822,13 @@ def main():
     sd.add_argument("--cause", required=True); sd.add_argument("--confidence", required=True, choices=["alta", "media", "baixa"])
     sd.add_argument("--bias-after", required=True, choices=["alta", "baixa", "neutro"]); sd.add_argument("--note")
     sub.add_parser("ready")
+    ec = sub.add_parser("entry-check")
+    ec.add_argument("--zone-type", choices=["demanda", "oferta"], required=True)
+    for k in ("zone-low", "zone-high", "o", "h", "l", "c", "atr"): ec.add_argument("--" + k, type=float, required=True)
+    ec.add_argument("--score", type=float); ec.add_argument("--bias", choices=["alta", "baixa", "neutro"])
+    ec.add_argument("--target-low", type=float); ec.add_argument("--target-high", type=float)
+    ec.add_argument("--risk-usd", type=float, default=0.5); ec.add_argument("--usd-per-point", type=float, help="USD por ponto para 1 lote (confirmar na Pepperstone)")
+    ec.add_argument("--min-lot", type=float, default=0.01)
     st = sub.add_parser("stats"); st.add_argument("--mode", choices=["treino", "real"], default="treino")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")
     sm = sub.add_parser("add-sentiment"); sm.add_argument("--source", required=True); sm.add_argument("--metric", required=True)
@@ -811,7 +865,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "ready": cmd_ready, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "ready": cmd_ready, "entry-check": cmd_entry_check, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 
