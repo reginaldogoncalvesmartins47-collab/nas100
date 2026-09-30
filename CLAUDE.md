@@ -18,6 +18,12 @@ Ajudar o usuario a operar o NAS100 (PEPPERSTONE:NAS100): ler o grafico no Tradin
 - Entrada por varredura de liquidez (dia/semana anterior, Asia, Londres) a favor do vies.
 - Horario de operacao: 06:00-23:20 (Brasilia), seg-sex.
 
+## Antes de qualquer entrada (ordem)
+1. calendario do dia (Investing, pela extensao) -> 2. noticias na janela (dom/seg desde sexta 16h BRT; ter-sex 24h)
+-> 3. feriados globais, eventos fora do calendario e plano antecipado -> 4. leitura RACIOCINADA dos pares em H1/H4
+-> 5. `python scripts/calendar_db.py gate` = LIBERADO -> so entao regiao com nota + reacao do mercado + RR + risco.
+Nunca perseguir a manchete. Nao usar noticia fora da janela. Nao aplicar correlacao mecanica.
+
 ## Arquivos
 - `pine/` scripts Pine (TradingView). `nas100_liquidez_v2.pine` e o atual; nao testado ate o momento.
 - `docs/` metodo, liquidez e regioes, fluxo de analise, risco, setup do MCP, roadmap.

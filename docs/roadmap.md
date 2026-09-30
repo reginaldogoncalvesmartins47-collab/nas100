@@ -13,6 +13,8 @@
 - [x] Fase 2: analise de noticias e regra do gap/vies vencido (docs/analise-noticias.md, tabela news)
 - [x] Janela de informacao: dom/seg desde sexta 16:00; ter-sex ultimas 24 h; data/hora obrigatorias (codigo)
 - [x] Regra 3: feriados globais, eventos fora do calendario, plano antecipado com correlacionados, briefing (docs/contexto-feriados-eventos.md)
+- [x] Regra 4: analise raciocinada dos pares em H1/H4 + trava `gate` no codigo (docs/analise-pares.md)
+- [ ] Regra do gap e do vies vencido (ainda nao no gate)
 - [ ] Confirmar com a usuaria os niveis de fonte (docs/analise-noticias.md)
 - [ ] Calibrar pontos/tolerancias com a base M15 do NAS100 (usuario precisa fornecer o CSV)
 - [ ] Compilar e rodar v2 no Pine Editor (M15, modo teste, capital 1000, limites altos)

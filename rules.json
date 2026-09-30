@@ -62,6 +62,7 @@
       "gate_0_calendar: calendario do dia analisado",
       "gate_1_news: noticias/gap analisados e vies nao vencido",
       "gate_2_context: feriados, eventos extras e plano antecipado com correlacionados feitos; nenhum item SEM PLANO",
+      "gate_3_pairs: leitura raciocinada de VIX, Brent, US10Y, ES e DXY em H1 e H4, dentro da validade; `calendar_db.py gate` = LIBERADO",
       "region_score >= minimo (com ou contra a macro)",
       "reacao do mercado na regiao (varredura valida + fechamento de volta, ou confirmacao definida pelo usuario)",
       "RR ate a proxima liquidez oposta >= 2",
@@ -131,7 +132,8 @@
       "outside_window": "noticia fora da janela nunca e usada como explicacao do movimento; so historico",
       "empty_window": "se nao houver noticia dentro da janela, dizer isso; NUNCA recorrer a noticia mais antiga para explicar o movimento",
       "holidays": "feriado dos EUA na segunda: janela a revisar (nao tratado)"
-    }
+    },
+    "checked_fresh_minutes": 60
   },
   "theme_correlations": {
     "_nota": "HIPOTESES a calibrar. Ativos a observar junto do NAS100 quando o tema aparece.",
@@ -196,5 +198,34 @@
     "after_event": "depois do evento a leitura da reacao serve para gerir/ajustar o plano e ler correlacionados, nao para perseguir a manchete",
     "memory": "tudo gravado em data/calendario.db (holidays, extra_events, news, plans); comando `brief` mostra pendencias (SEM PLANO, TARDIO) para nada se perder durante o dia",
     "extra_event_rules": "published_at com fuso obrigatorio; 2 fontes nivel 1-2 para confirmar; status: anunciado/confirmado/ocorrido/cancelado"
+  },
+  "gate_3_pairs": {
+    "rule": "Antes de qualquer entrada, dentro do horario de operacao, o Claude RACIOCINA sobre os pares do NAS100 em H1 e H4. NAO e correlacao simples nem regra mecanica (ex.: 'petroleo caiu => compra'). Cada leitura exige: tendencia, POR QUE (causa/noticia), implicacao para o NAS, confianca e o que INVALIDA.",
+    "doc": "docs/analise-pares.md",
+    "required": [
+      "VIX",
+      "Brent",
+      "US10Y",
+      "ES",
+      "DXY"
+    ],
+    "optional_by_theme": [
+      "US02Y",
+      "NVDA",
+      "SOX",
+      "USDCNH"
+    ],
+    "timeframes_required": [
+      "H1",
+      "H4"
+    ],
+    "timeframes_rejected": "M1-M30 nao contam como base do macro",
+    "fresh_minutes": {
+      "H1": 60,
+      "H4": 240
+    },
+    "conflict_rule": "implicacao 'conflito' exige explicacao da divergencia (campo divergence)",
+    "store": "tabela pair_reads; comandos add-read / reads",
+    "enforced_by": "scripts/calendar_db.py gate"
   }
 }
