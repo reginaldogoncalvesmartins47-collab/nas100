@@ -81,12 +81,20 @@
       "o que o mercado espera (consenso, probabilidades de juros, tom das noticias) e cenarios acima/em linha/abaixo",
       "geopolitica e petroleo (Brent) do dia"
     ],
-    "sources": "cruzar pelo menos 2 fontes; se divergirem ou faltarem dados, dizer e nao assumir",
+    "sources": "Investing.com primeiro; segunda fonte so para conferir divergencia; se faltar dado, dizer e nao assumir",
     "event_windows": {
       "pre": "posicionamento do usuario permitido",
       "event": "marcar como trade de evento; spread/slippage pior",
       "post": "ler reacao vs consenso antes de novo sinal"
     },
-    "output": "briefing do calendario (modelo em docs/analise-calendario.md)"
+    "output": "briefing do calendario (modelo em docs/analise-calendario.md)",
+    "primary_source": {
+      "name": "Investing.com calendario economico",
+      "url": "https://br.investing.com/economic-calendar",
+      "filters": "pais EUA; importancia 2-3 estrelas (1 estrela so se ligada ao NAS); fuso Brasilia; incluir falas do Fed e resultados de gigantes de tecnologia",
+      "capture": "hora, pais, evento, estrelas, atual, projecao, anterior, previa quando houver",
+      "access": "ler a pagina ja aberta/logada no navegador da usuaria; NAO guardar senha em arquivos; conferir termos de uso do site antes de automatizar",
+      "fallback": "usuaria cola print/texto do calendario (funciona hoje)"
+    }
   }
 }
