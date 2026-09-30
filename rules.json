@@ -454,5 +454,24 @@
       "regioes (FVG, novos extremos) e trades abertos; so depois o resto do gate"
     ],
     "open_trades": "listar e revisar stop/protecao imediatamente"
+  },
+  "go_live": {
+    "_nota": "criterios para considerar a conta real, medidos no treino; escolhas do Claude, a usuaria pode mudar; nao garantem lucro",
+    "min_trades": 50,
+    "min_days": 10,
+    "min_expectancy_r": 0.15,
+    "min_profit_factor": 1.3,
+    "max_drawdown_r": 6.0,
+    "lower_bound_sigma": 1.0,
+    "command": "ready"
+  },
+  "objective": {
+    "priority": "lucro liquido (depois de spread/custos), medido em R medio por trade",
+    "hard_limit": "o lucro nunca e buscado afrouxando os limites de capital, o stop obrigatorio ou o gate do modo real",
+    "who_decides": {
+      "claude": "parametros tecnicos dentro de tuning.tunable, com evidencia e historico",
+      "user": "quanto arriscar, quando ir para o real, quais fontes confiar, meta de lucro"
+    },
+    "communication": "a usuaria nao e tecnica: explicar em portugues simples, dizer o que significa na pratica, e perguntar so decisoes de negocio/risco"
   }
 }

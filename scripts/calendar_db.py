@@ -24,6 +24,7 @@ Comandos:
   bias [--set alta|baixa|neutro --reason TXT]   vies do dia (mostra o atual; o choque o marca como VENCIDO)
   shock --o O --h H --l L --c C --atr A [--prev-close PC --atr-gap AH --h1 H2 --l1 L2]   detecta gap, vela enorme e FVG; abre CHOQUE e vence o vies
   shock-diagnose --id N --category C --cause TXT --confidence alta|media|baixa --bias-after alta|baixa|neutro   diagnostico rapido do choque
+  ready                             veredito em portugues simples: ja da para ir para a conta real? (criterios do treino)
   stats [--mode treino|real]        acerto, R medio, MFE, quanto devolveu, por motivo de saida e por estado do gate
   themes                            temas e ativos correlacionados (rules.json)
   add-read --pair P --tf H1|H4|D1 --trend T --why TXT --implication I --confidence C --invalidation TXT   leitura RACIOCINADA de um par (micro nao aceito)
@@ -664,6 +665,38 @@ def cmd_shock_diagnose(con, a):
     con.commit(); print(f"choque #{a.id} diagnosticado ({a.category}, confianca {conf}); vies agora {a.bias_after.upper()}")
     if a.category == "desconhecida": print("  atencao: sem causa confirmada, a leitura do viés tem confianca baixa; continuar procurando a causa.")
 
+def cmd_ready(con, a):
+    G = load_rules().get("go_live", {})
+    need_n = G.get("min_trades", 50); need_days = G.get("min_days", 10); need_exp = G.get("min_expectancy_r", 0.15)
+    need_pf = G.get("min_profit_factor", 1.3); max_dd = G.get("max_drawdown_r", 6.0); sig = G.get("lower_bound_sigma", 1.0)
+    rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode='treino' ORDER BY closed_at").fetchall()
+    n = len(rows); R = [r["result_r"] for r in rows]
+    days = len({r["closed_at"][:10] for r in rows})
+    print("=== JA DA PARA IR PARA A CONTA REAL? (baseado no treino) ===")
+    if n == 0:
+        print("NAO. Ainda nao ha trades fechados no treino."); return
+    mean = sum(R) / n; var = sum((x - mean) ** 2 for x in R) / (n - 1) if n > 1 else 0.0
+    se = (var ** 0.5) / (n ** 0.5) if n > 1 else float("inf"); lower = mean - sig * se
+    wins = sum(x for x in R if x > 0); losses = -sum(x for x in R if x < 0)
+    pf = wins / losses if losses > 0 else float("inf")
+    peak = cum = dd = 0.0
+    for x in R:
+        cum += x; peak = max(peak, cum); dd = max(dd, peak - cum)
+    checks = [
+        (n >= need_n, f"trades no treino: {n} (minimo {need_n})"),
+        (days >= need_days, f"dias diferentes operados: {days} (minimo {need_days})"),
+        (mean >= need_exp, f"ganho medio por trade: {mean:+.2f}R (minimo {need_exp:+.2f}R)"),
+        (lower > 0, f"ganho medio descontando a incerteza da amostra: {lower:+.2f}R (precisa ser positivo)"),
+        (pf >= need_pf, f"lucro bruto / prejuizo bruto: {pf:.2f} (minimo {need_pf})"),
+        (dd <= max_dd, f"maior queda acumulada: {dd:.1f}R (maximo {max_dd}R)"),
+    ]
+    for ok, msg in checks: print(("  OK   " if ok else "  FALTA") + " " + msg)
+    if all(ok for ok, _ in checks):
+        print("RESULTADO: os criterios do treino foram cumpridos. Isso NAO garante lucro no real (spread, slippage e emocao pioram). Se for, comece com o menor tamanho possivel e com os limites de capital.")
+    else:
+        print("RESULTADO: AINDA NAO. Continue no treino; ir agora seria apostar, nao operar com vantagem comprovada.")
+    print("(1R = o valor que voce arrisca em cada trade. Criterios sao escolhas minhas e podem ser mudadas por voce.)")
+
 def cmd_stats(con, a):
     rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
     if not rows: print(f"sem trades fechados no modo {a.mode}"); return
@@ -741,6 +774,7 @@ def main():
     sd.add_argument("--category", required=True, choices=["petroleo", "geopolitica", "ia_tech", "fed_juros", "dados", "resultado", "liquidez_tecnica", "desconhecida"])
     sd.add_argument("--cause", required=True); sd.add_argument("--confidence", required=True, choices=["alta", "media", "baixa"])
     sd.add_argument("--bias-after", required=True, choices=["alta", "baixa", "neutro"]); sd.add_argument("--note")
+    sub.add_parser("ready")
     st = sub.add_parser("stats"); st.add_argument("--mode", choices=["treino", "real"], default="treino")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")
     sm = sub.add_parser("add-sentiment"); sm.add_argument("--source", required=True); sm.add_argument("--metric", required=True)
@@ -777,7 +811,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "ready": cmd_ready, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 

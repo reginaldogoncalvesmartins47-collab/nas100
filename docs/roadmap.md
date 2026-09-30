@@ -19,6 +19,7 @@
 - [x] Alvo = regiao de oferta/demanda + leitura do caminho (path) + alerta de protecao
 - [x] Tempo grafico de execucao e saida: M5 (macro H1/H4, regioes H1 + refino M15)
 - [x] Auto-ajuste com limites: tune / tune-history / tune-revert (docs/auto-ajuste.md)
+- [x] Objetivo lucro + quem decide + veredito `ready` para a conta real (docs/decisoes-e-objetivo.md)
 - [ ] Calibrar o criterio de pavio em M5 com exemplos OHLC da usuaria
 - [ ] Escolher e testar variantes de saida A/B/C/D na demo
 - [x] Choque de mercado (gap/vela enorme/FVG) + vies vencido no gate + sem limite de trades (docs/choque-de-mercado.md)
