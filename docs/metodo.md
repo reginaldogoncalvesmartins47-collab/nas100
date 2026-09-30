@@ -20,6 +20,9 @@ Abordagem em teste:
 - Stop atras do pavio da varredura; alvo na proxima liquidez oposta; RR minimo configuravel.
 - Medias (semanal, 24h) foram tentadas como suporte/resistencia e nao resolveram.
 
+## 2b. Regioes e liquidez valida
+Ver `docs/liquidez-e-regioes.md` (criterios de liquidez valida, Fibo no H1, pontuacao de regioes).
+
 ## 3. A DEFINIR
 - Gatilho exato alem da varredura (FVG depois da varredura? CHoCH? horario?).
 - Como julgar volume do Brent/ES (criterio objetivo).

@@ -2,6 +2,8 @@
 
 - [x] Estrategia Pine v1 (macro + liquidez) - backtest mostrou 5 trades; teste parou cedo pelo corte de seguranca
 - [x] Estrategia Pine v2 (liquidez + vies manual) - escrita, NAO testada/compilada
+- [x] Documento de liquidez valida, Fibo H1 e pontuacao de regioes (hipoteses a calibrar)
+- [ ] Calibrar pontos/tolerancias com a base M15 do NAS100 (usuario precisa fornecer o CSV)
 - [ ] Compilar e rodar v2 no Pine Editor (M15, modo teste, capital 1000, limites altos)
 - [ ] Ler backtest e lista de negociacoes; ajustar niveis/gatilho
 - [ ] Definir gatilho exato e criterio de volume (ver docs/metodo.md, secao A DEFINIR)
