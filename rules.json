@@ -273,6 +273,16 @@
     },
     "exit_on_invalidation": "vies vencido, nivel de invalidacao do plano perdido, par correlacionado virando contra com confirmacao",
     "time_stop_bars_m15": 8,
-    "log": "tabela trades (MFE/MAE, quanto devolveu, motivo de saida)"
+    "log": "tabela trades (MFE/MAE, quanto devolveu, motivo de saida)",
+    "target": {
+      "rule": "alvo = proxima regiao de OFERTA (compra) ou DEMANDA (venda), vinda do mapa de regioes (SMC, PDH/PWH, EQH/EQL, Fibo); gravar a zona com --zone-low/--zone-high",
+      "operational_target_hypothesis": "borda proxima da zona (o preco costuma reagir na borda antes de atravessar); testar borda vs meio vs borda distante",
+      "doc": "docs/gestao-saida.md"
+    },
+    "path_monitoring": {
+      "command": "path",
+      "each_check": "qualidade do caminho (forte/fraca/lateral/revertendo), pares confirmam (sim/parcial/nao), distancia ate a borda da regiao",
+      "alert_hypothesis": "caminho fraca/revertendo + pares sem confirmar + trade ja em +1R => considerar proteger"
+    }
   }
 }

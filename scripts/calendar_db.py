@@ -11,10 +11,11 @@ Comandos:
   upsert-extra ARQ.json             eventos fora do calendario (cupulas, discursos) - exige published_at com fuso
   add-plan --stance compra|venda --theme T --correlated A,B --position TXT [--event-id N|--extra-id N|--event-time ISO]   plano de posicionamento ANTECIPADO
   close-plan --id N --status concluido|invalidado   encerra plano
-  open-trade --mode treino|real --side compra|venda --entry E --stop S --risk-usd R [--target1 --target2 --size --region-score --bias --plan-id --notes]
+  open-trade --mode treino|real --side compra|venda --entry E --stop S --risk-usd R [--target1 --target2 --zone-low L --zone-high H (regiao de oferta/demanda-alvo) --size --region-score --bias --plan-id --notes]
                                     registra entrada. Limites de capital valem SEMPRE; no treino o gate nao bloqueia (so registra); no real bloqueia
   update-trade --id N --high H --low L [--be-moved]   atualiza maxima/minima desde a ultima vez (mede quanto o trade andou a favor: MFE)
   close-trade --id N --exit-price P --reason stop|alvo1|alvo2|breakeven|trailing|invalidacao|tempo|evento|manual|fim_dia   fecha e calcula R
+  path --id N --price P --quality forte|fraca|lateral|revertendo --pairs sim|parcial|nao [--note]   leitura do CAMINHO ate a regiao-alvo
   stats [--mode treino|real]        acerto, R medio, MFE, quanto devolveu, por motivo de saida e por estado do gate
   themes                            temas e ativos correlacionados (rules.json)
   add-read --pair P --tf H1|H4|D1 --trend T --why TXT --implication I --confidence C --invalidation TXT   leitura RACIOCINADA de um par (micro nao aceito)
@@ -86,7 +87,11 @@ CREATE TABLE IF NOT EXISTS trades (
   entry REAL NOT NULL, stop REAL NOT NULL, target1 REAL, target2 REAL, size REAL, risk_usd REAL,
   region_score REAL, bias TEXT, plan_id INTEGER, gate_ok INTEGER, gate_pending TEXT,
   exit_price REAL, exit_reason TEXT, result_usd REAL, result_r REAL, mfe_r REAL DEFAULT 0, mae_r REAL DEFAULT 0,
-  be_moved INTEGER DEFAULT 0, notes TEXT
+  be_moved INTEGER DEFAULT 0, notes TEXT, target_zone_low REAL, target_zone_high REAL
+);
+CREATE TABLE IF NOT EXISTS trade_path (
+  id INTEGER PRIMARY KEY, trade_id INTEGER NOT NULL REFERENCES trades(id), at TEXT NOT NULL, price REAL NOT NULL,
+  quality TEXT NOT NULL, pairs_confirm TEXT NOT NULL, note TEXT
 );
 CREATE TABLE IF NOT EXISTS reactions (
   event_id INTEGER PRIMARY KEY REFERENCES events(id),
@@ -108,8 +113,10 @@ def connect(path):
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     con = sqlite3.connect(path); con.row_factory = sqlite3.Row
     con.executescript(SCHEMA)
-    try: con.execute("ALTER TABLE plans ADD COLUMN stance TEXT")  # bancos criados antes da regra de posicionamento
-    except sqlite3.OperationalError: pass
+    for ddl in ("ALTER TABLE plans ADD COLUMN stance TEXT", "ALTER TABLE trades ADD COLUMN target_zone_low REAL",
+                "ALTER TABLE trades ADD COLUMN target_zone_high REAL"):  # bancos criados antes
+        try: con.execute(ddl)
+        except sqlite3.OperationalError: pass
     return con
 
 def now(): return datetime.now().isoformat(timespec="seconds")
@@ -422,6 +429,9 @@ def cmd_open_trade(con, a):
     per, daily, kill = risk_cfg(); n = now_brt(); d = n.strftime("%Y-%m-%d"); dist = abs(a.entry - a.stop)
     if dist <= 0 or (a.side == "compra" and a.stop >= a.entry) or (a.side == "venda" and a.stop <= a.entry):
         sys.exit("REJEITADO: stop invalido (obrigatorio e do lado certo). Nunca entrar sem stop.")
+    if (a.zone_low is None) != (a.zone_high is None): sys.exit("REJEITADO: informe --zone-low e --zone-high juntos")
+    if a.zone_low is not None and ((a.side == "compra" and a.zone_low <= a.entry) or (a.side == "venda" and a.zone_high >= a.entry) or a.zone_low > a.zone_high):
+        sys.exit("REJEITADO: regiao-alvo do lado errado (compra: zona de oferta ACIMA da entrada; venda: zona de demanda ABAIXO)")
     if a.risk_usd > per: sys.exit(f"REJEITADO: risco US$ {a.risk_usd} acima do maximo por trade US$ {per}. Limite de capital vale sempre (treino e real).")
     today = con.execute("SELECT COALESCE(SUM(result_usd),0) s FROM trades WHERE mode=? AND closed_at LIKE ?", (a.mode, d + "%")).fetchone()["s"]
     total = con.execute("SELECT COALESCE(SUM(result_usd),0) s FROM trades WHERE mode=? AND closed_at IS NOT NULL", (a.mode,)).fetchone()["s"]
@@ -431,10 +441,10 @@ def cmd_open_trade(con, a):
     if todo and a.mode == "real":
         print("REJEITADO (modo real exige gate LIBERADO). Pendencias:"); [print(" -", m) for m, _h in todo]; sys.exit(1)
     if todo: print(f"treino: entrada PERMITIDA e registrada com gate_ok=0 ({len(todo)} pendencia(s)); sera comparada nas estatisticas.")
-    con.execute("""INSERT INTO trades(mode,opened_at,side,entry,stop,target1,target2,size,risk_usd,region_score,bias,plan_id,gate_ok,gate_pending,notes)
-                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+    con.execute("""INSERT INTO trades(mode,opened_at,side,entry,stop,target1,target2,size,risk_usd,region_score,bias,plan_id,gate_ok,gate_pending,notes,target_zone_low,target_zone_high)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (a.mode, n.isoformat(timespec="seconds"), a.side, a.entry, a.stop, a.target1, a.target2, a.size, a.risk_usd,
-                 a.region_score, a.bias, a.plan_id, 0 if todo else 1, "; ".join(m for m, _h in todo) or None, a.notes))
+                 a.region_score, a.bias, a.plan_id, 0 if todo else 1, "; ".join(m for m, _h in todo) or None, a.notes, a.zone_low, a.zone_high))
     con.commit(); print("trade aberto, id", con.execute("SELECT last_insert_rowid()").fetchone()[0])
 
 def excursion(r, high, low):
@@ -465,6 +475,27 @@ def cmd_close_trade(con, a):
                 (now_brt().isoformat(timespec="seconds"), a.exit_price, a.reason, round(res_r, 3), usd, mfe, mae, a.notes, a.id))
     con.commit(); print(f"fechado: {res_r:+.2f}R (US$ {usd}) | MFE {mfe:.2f}R | devolveu {mfe - res_r:.2f}R | motivo {a.reason}")
 
+def edge_r(r):
+    """distancia em R ate a BORDA PROXIMA da regiao-alvo (compra: base da zona de oferta; venda: topo da zona de demanda)"""
+    if r["target_zone_low"] is None: return None
+    dist = abs(r["entry"] - r["stop"])
+    return ((r["target_zone_low"] - r["entry"]) if r["side"] == "compra" else (r["entry"] - r["target_zone_high"])) / dist
+
+def cmd_path(con, a):
+    r = con.execute("SELECT * FROM trades WHERE id=? AND closed_at IS NULL", (a.id,)).fetchone()
+    if not r: sys.exit("trade nao encontrado ou ja fechado")
+    dist = abs(r["entry"] - r["stop"]); sgn = 1 if r["side"] == "compra" else -1
+    now_r = (a.price - r["entry"]) * sgn / dist
+    con.execute("INSERT INTO trade_path(trade_id,at,price,quality,pairs_confirm,note) VALUES(?,?,?,?,?,?)",
+                (a.id, now_brt().isoformat(timespec="seconds"), a.price, a.quality, a.pairs, a.note)); con.commit()
+    er = edge_r(r); msg = f"agora {now_r:+.2f}R"
+    if er is not None:
+        near = r["target_zone_low"] if r["side"] == "compra" else r["target_zone_high"]
+        msg += f" | borda da regiao-alvo a {er:.2f}R da entrada ({abs(near - a.price):.1f} pts do preco)"
+    print(msg + f" | caminho {a.quality}, pares confirmam: {a.pairs}")
+    if a.quality in ("fraca", "revertendo") and a.pairs != "sim" and (r["mfe_r"] or 0) >= 1:
+        print("ALERTA (hipotese do docs/gestao-saida.md): caminho deteriorando, pares sem confirmar e o trade ja andou +1R: considerar proteger (parcial, break-even ou trailing).")
+
 def cmd_stats(con, a):
     rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
     if not rows: print(f"sem trades fechados no modo {a.mode}"); return
@@ -473,6 +504,10 @@ def cmd_stats(con, a):
     rev = [r for r in rows if (r["mfe_r"] or 0) >= 1 and r["result_r"] <= 0]
     print(f"Modo {a.mode}: {len(rows)} trades | acerto {100*sum(1 for x in R if x>0)/len(R):.0f}% | R medio {avg(R):+.2f} | MFE medio {avg([r['mfe_r'] or 0 for r in rows]):.2f}R | devolvido em media {avg(give):.2f}R")
     print(f"Chegaram a +1R e terminaram em 0 ou negativo: {len(rev)} de {len(rows)} (argumento para parcial/break-even)")
+    zr = [(r, edge_r(r)) for r in rows if edge_r(r) is not None]
+    if zr:
+        reached = [(r, e) for r, e in zr if (r["mfe_r"] or 0) >= e]
+        print(f"Com regiao-alvo: {len(zr)} trades | chegaram na borda da regiao: {len(reached)} | dos que chegaram, R medio final {avg([r['result_r'] for r, _ in reached]):+.2f} (vs MFE {avg([r['mfe_r'] for r, _ in reached]):.2f}R)")
     print("Por motivo de saida:")
     for k in sorted({r["exit_reason"] for r in rows}):
         g = [r for r in rows if r["exit_reason"] == k]; print(f"  {k}: {len(g)} trades, R medio {avg([x['result_r'] for x in g]):+.2f}")
@@ -511,11 +546,15 @@ def main():
     ot.add_argument("--target1", type=float); ot.add_argument("--target2", type=float); ot.add_argument("--size", type=float)
     ot.add_argument("--risk-usd", type=float, required=True); ot.add_argument("--region-score", type=float)
     ot.add_argument("--bias"); ot.add_argument("--plan-id", type=int); ot.add_argument("--notes")
+    ot.add_argument("--zone-low", type=float); ot.add_argument("--zone-high", type=float)
     ut = sub.add_parser("update-trade"); ut.add_argument("--id", type=int, required=True)
     ut.add_argument("--high", type=float, required=True); ut.add_argument("--low", type=float, required=True); ut.add_argument("--be-moved", action="store_true")
     ct = sub.add_parser("close-trade"); ct.add_argument("--id", type=int, required=True); ct.add_argument("--exit-price", type=float, required=True)
     ct.add_argument("--reason", required=True, choices=["stop", "alvo1", "alvo2", "breakeven", "trailing", "invalidacao", "tempo", "evento", "manual", "fim_dia"])
     ct.add_argument("--high", type=float); ct.add_argument("--low", type=float); ct.add_argument("--notes")
+    pt = sub.add_parser("path"); pt.add_argument("--id", type=int, required=True); pt.add_argument("--price", type=float, required=True)
+    pt.add_argument("--quality", choices=["forte", "fraca", "lateral", "revertendo"], required=True)
+    pt.add_argument("--pairs", choices=["sim", "parcial", "nao"], required=True); pt.add_argument("--note")
     st = sub.add_parser("stats"); st.add_argument("--mode", choices=["treino", "real"], default="treino")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")
     sm = sub.add_parser("add-sentiment"); sm.add_argument("--source", required=True); sm.add_argument("--metric", required=True)
@@ -552,7 +591,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "path": cmd_path, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 

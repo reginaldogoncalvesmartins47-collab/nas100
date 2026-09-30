@@ -33,6 +33,21 @@ Separar duas coisas que estavam misturadas:
    obrigatorio), o stop e o tamanho ja refletem o risco de slippage.
 Atencao: break-even cedo demais tira trades bons no ruido; parcial reduz o ganho dos grandes movimentos. Por isso testar.
 
+## 3b. Alvo = regiao de oferta (compra) ou demanda (venda) e leitura do caminho
+Decisao da usuaria: no trade comprado, o alvo e a **proxima regiao de oferta**; na venda, a proxima de **demanda**.
+Ela acompanha **como esta a movimentacao ate la**.
+- **Regiao-alvo:** vem do mapa de regioes (oferta/demanda do SMC, PDH/PWH, topos iguais, Fibo). Gravar a zona no trade:
+  `open-trade ... --zone-low L --zone-high H`. O codigo rejeita zona do lado errado.
+- **Alvo operacional (hipotese):** a **borda proxima** da zona, nao o meio nem o topo: o preco costuma reagir na borda
+  antes de atravessar. Testar borda x meio x borda distante.
+- **Leitura do caminho a cada checagem:** `path --id N --price P --quality forte|fraca|lateral|revertendo --pairs sim|parcial|nao`.
+  Olhar: forca do movimento, estrutura de M15/H1 (quebra interna contra?), se os pares continuam confirmando (VIX, juros,
+  Brent, ES), obstaculos no meio do caminho (outra zona/liquidez = candidato a parcial) e sinais perto da zona
+  (pavios, desaceleracao). O comando mostra quantos R faltam ate a borda.
+- **Alerta (hipotese):** caminho fraco/revertendo + pares sem confirmar + trade ja em +1R => considerar proteger
+  (parcial, break-even ou trailing). E um aviso, nao uma ordem.
+- `stats` passa a mostrar quantos trades chegaram a borda da regiao-alvo e quanto devolveram depois.
+
 ## 4. Como otimizar com dados (antes da conta real)
 Cada trade entra na tabela `trades` (comandos `open-trade`, `update-trade`, `close-trade`, `stats`):
 - **MFE** = quanto o trade andou a favor (em R) no melhor momento. **Devolvido** = MFE - resultado final.
@@ -43,7 +58,7 @@ Decisoes guiadas pelos numeros (exemplos de leitura):
 - Muitos trades chegam a +1R e terminam em 0 ou negativo => justifica parcial/break-even em +1R.
 - Break-even tira muitos trades que depois iriam ao alvo => mover o break-even para +1,5R ou usar trailing por estrutura.
 Experimento: rodar variantes em sequencia, uma por vez, com o mesmo numero de trades:
-A) stop e alvo fixos; B) break-even em +1R; C) parcial de 50% em +1R + trailing. Comparar R medio e devolvido.
+A) stop e alvo fixos; B) break-even em +1R; C) parcial de 50% em +1R + trailing; D) saida na borda da regiao-alvo x meio x borda distante. Comparar R medio e devolvido.
 
 ## 5. Limites
 - Amostra pequena nao prova nada (30 a 50 trades por variante, no minimo).
