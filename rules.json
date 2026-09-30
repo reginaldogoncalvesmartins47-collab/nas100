@@ -286,7 +286,9 @@
       "how_to_read": "ler OHLC do ultimo candle M5 FECHADO via MCP e passar a `path --o --h --l --c`; o codigo detecta o pavio e se foi na regiao-alvo; calibrar o criterio (palpite: pavio >= 50% da amplitude e >= 2x o corpo) com exemplos OHLC de M5 marcados pela usuaria",
       "candle_tf": "M5",
       "check_after_each_close_min": 5,
-      "m5_note": "M5 e mais ruidoso: o criterio pode precisar ser relativo ao ATR de M5; calibrar"
+      "m5_note": "M5 e mais ruidoso: o criterio pode precisar ser relativo ao ATR de M5; calibrar",
+      "wick_min_range_pct": 0.5,
+      "wick_min_body_multiple": 2
     },
     "time_stop_bars_m5": 24,
     "time_stop_note": "hipotese: 24 candles de M5 (2 h) sem progresso => sair/reduzir; equivalente ao valor anterior de 8 candles de M15; testar"
@@ -300,5 +302,134 @@
     "regions": "Fibo H1 define regioes; Fibo M15 refina dentro de regiao H1 valida",
     "execution_and_exit": "M5 (entrada e leitura de pavio para sair)",
     "rule": "M1-M30 nunca como base do macro; M5 so para execucao e saida"
+  },
+  "tuning": {
+    "rule": "O Claude PODE ajustar parametros marcados como hipotese, com evidencia minima, um de cada vez, com historico e possibilidade de desfazer. Nunca os protegidos.",
+    "doc": "docs/auto-ajuste.md",
+    "min_evidence": {
+      "trades": 30,
+      "exemplos": 10
+    },
+    "cooldown_trades": 10,
+    "auto_apply_modes": [
+      "treino"
+    ],
+    "real_requires_user_approval": true,
+    "protected": [
+      "risk.per_trade_usd_max",
+      "risk.daily_loss_usd",
+      "risk.kill_total_usd",
+      "stop_obrigatorio",
+      "gate do modo real",
+      "nao_perseguir_manchete",
+      "datas_e_fontes_das_noticias",
+      "janela_de_informacao",
+      "execucao_em_conta_real"
+    ],
+    "tunable": {
+      "wick_min_range_pct": {
+        "path": [
+          "exit_management",
+          "path_monitoring",
+          "wick_min_range_pct"
+        ],
+        "min": 0.3,
+        "max": 0.8
+      },
+      "wick_min_body_multiple": {
+        "path": [
+          "exit_management",
+          "path_monitoring",
+          "wick_min_body_multiple"
+        ],
+        "min": 1,
+        "max": 4
+      },
+      "breakeven_at_r": {
+        "path": [
+          "exit_management",
+          "progressive",
+          "breakeven_at_r"
+        ],
+        "min": 0.5,
+        "max": 2.0
+      },
+      "partial_at_r": {
+        "path": [
+          "exit_management",
+          "progressive",
+          "partial_at_r"
+        ],
+        "min": 0.5,
+        "max": 2.5
+      },
+      "partial_pct": {
+        "path": [
+          "exit_management",
+          "progressive",
+          "partial_pct"
+        ],
+        "min": 25,
+        "max": 75
+      },
+      "time_stop_bars_m5": {
+        "path": [
+          "exit_management",
+          "time_stop_bars_m5"
+        ],
+        "min": 6,
+        "max": 72
+      },
+      "fresh_minutes_h1": {
+        "path": [
+          "gate_3_pairs",
+          "fresh_minutes",
+          "H1"
+        ],
+        "min": 30,
+        "max": 240
+      },
+      "fresh_minutes_h4": {
+        "path": [
+          "gate_3_pairs",
+          "fresh_minutes",
+          "H4"
+        ],
+        "min": 120,
+        "max": 480
+      },
+      "news_incremental_warn_minutes": {
+        "path": [
+          "gate_1_news",
+          "incremental_warn_minutes"
+        ],
+        "min": 30,
+        "max": 240
+      },
+      "gap_stale_atr_h1": {
+        "path": [
+          "gate_1_news",
+          "gap_stale_atr_h1"
+        ],
+        "min": 0.5,
+        "max": 3.0
+      },
+      "min_score_with_macro": {
+        "path": [
+          "regions",
+          "min_score_with_macro"
+        ],
+        "min": 2,
+        "max": 5
+      },
+      "min_score_against_macro": {
+        "path": [
+          "regions",
+          "min_score_against_macro"
+        ],
+        "min": 3,
+        "max": 6
+      }
+    }
   }
 }

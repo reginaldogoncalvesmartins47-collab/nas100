@@ -38,6 +38,10 @@ Ela opera e le rejeicao de pavio em M5. O Claude entende pelos valores de open/h
 Tempos: macro/vies H1 e H4; regioes Fibo H1 (+ refino M15); execucao e saida M5.
 Usar `path --o --h --l --c` e `wick`. Saida: alvo = regiao de oferta/demanda; acompanhar o caminho (`path`).
 
+## Auto-ajuste (docs/auto-ajuste.md)
+O Claude pode ajustar parametros de hipotese com `tune` (evidencia minima, um por vez, historico, revert; real exige aprovacao
+da usuaria). NUNCA ajustar limites de capital, stop obrigatorio, gate do modo real, regras de data/fonte/janela das noticias.
+
 ## Arquivos
 - `pine/` scripts Pine (TradingView). `nas100_liquidez_v2.pine` e o atual; nao testado ate o momento.
 - `docs/` metodo, liquidez e regioes, fluxo de analise, risco, setup do MCP, roadmap.

@@ -17,6 +17,10 @@ Comandos:
   close-trade --id N --exit-price P --reason stop|alvo1|alvo2|breakeven|trailing|invalidacao|tempo|evento|manual|fim_dia   fecha e calcula R
   path --id N --price P --quality forte|fraca|lateral|revertendo --pairs sim|parcial|nao [--o O --h H --l L --c C (ultimo candle fechado: detecta o pavio sozinho) | --wick superior|inferior --wick-where zona|caminho] [--note]   leitura do CAMINHO ate a regiao-alvo
   wick --open O --high H --low L --close C [--atr A]   mede os pavios de um candle (auxilio; decisao e visual)
+  tune --param P --value V --reason TXT --evidence-kind trades|exemplos --evidence-n N [--mode treino|real]
+                                    o Claude ajusta um parametro PERMITIDO, com evidencia minima, um de cada vez, com historico (real exige aprovacao da usuaria)
+  tune-history                      historico de ajustes
+  tune-revert --id N                desfaz um ajuste
   stats [--mode treino|real]        acerto, R medio, MFE, quanto devolveu, por motivo de saida e por estado do gate
   themes                            temas e ativos correlacionados (rules.json)
   add-read --pair P --tf H1|H4|D1 --trend T --why TXT --implication I --confidence C --invalidation TXT   leitura RACIOCINADA de um par (micro nao aceito)
@@ -93,6 +97,10 @@ CREATE TABLE IF NOT EXISTS trades (
 CREATE TABLE IF NOT EXISTS trade_path (
   id INTEGER PRIMARY KEY, trade_id INTEGER NOT NULL REFERENCES trades(id), at TEXT NOT NULL, price REAL NOT NULL,
   quality TEXT NOT NULL, pairs_confirm TEXT NOT NULL, note TEXT, wick_side TEXT, wick_where TEXT
+);
+CREATE TABLE IF NOT EXISTS param_changes (
+  id INTEGER PRIMARY KEY, at TEXT NOT NULL, param TEXT NOT NULL, old_value TEXT, new_value TEXT, reason TEXT NOT NULL,
+  evidence_kind TEXT NOT NULL, evidence_n INTEGER NOT NULL, mode TEXT NOT NULL, reverted INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS reactions (
   event_id INTEGER PRIMARY KEY REFERENCES events(id),
@@ -305,10 +313,24 @@ def cmd_brief(con, a):
         print(f"  [{p['id']}] {(p['stance'] or 'SEM DIRECAO').upper()} | {p['theme']} | correlacionados: {p['correlated']} | {p['position_note']}{warn}")
     if not pl: print("  nenhum plano ativo")
 
+def rules_path():
+    return os.environ.get("RULES_PATH") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rules.json")
+
 def load_rules():
-    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rules.json")
-    try: return json.load(open(path, encoding="utf-8"))
+    try: return json.load(open(rules_path(), encoding="utf-8"))
     except Exception: return {}
+
+def get_path(d, path):
+    for k in path: d = d[k]
+    return d
+
+def set_path(d, path, v):
+    for k in path[:-1]: d = d[k]
+    d[path[-1]] = v
+
+def wick_cfg():
+    c = load_rules().get("exit_management", {}).get("path_monitoring", {})
+    return c.get("wick_min_range_pct", 0.5), c.get("wick_min_body_multiple", 2)
 
 def cmd_add_read(con, a):
     if a.tf not in ("H1", "H4", "D1"):
@@ -491,9 +513,10 @@ def cmd_path(con, a):
     if a.o is not None:
         if None in (a.h, a.l, a.c): sys.exit("informe --o --h --l --c juntos (ultimo candle fechado)")
         rng = a.h - a.l; body = abs(a.c - a.o); up = a.h - max(a.o, a.c); lo = min(a.o, a.c) - a.l
+        pr, bm = wick_cfg()
         if rng > 0 and a.wick == "nenhum":
-            if up >= 0.5 * rng and up >= 2 * body: a.wick = "superior"
-            elif lo >= 0.5 * rng and lo >= 2 * body: a.wick = "inferior"
+            if up >= pr * rng and up >= bm * body: a.wick = "superior"
+            elif lo >= pr * rng and lo >= bm * body: a.wick = "inferior"
         if a.wick != "nenhum" and r["target_zone_low"] is not None and not a.wick_where:
             touched = (a.h >= r["target_zone_low"]) if r["side"] == "compra" else (a.l <= r["target_zone_high"])
             a.wick_where = "zona" if touched else "caminho"
@@ -517,10 +540,56 @@ def cmd_wick(con, a):
     if rng <= 0: sys.exit("candle sem amplitude")
     body = abs(a.close - a.open); up = a.high - max(a.open, a.close); lo = min(a.open, a.close) - a.low
     print(f"amplitude {rng:.1f} | corpo {body:.1f} ({100*body/rng:.0f}%) | pavio superior {up:.1f} ({100*up/rng:.0f}%) | pavio inferior {lo:.1f} ({100*lo/rng:.0f}%)")
+    pr, bm = wick_cfg()
     for nome, w in (("SUPERIOR (rejeicao de topo)", up), ("INFERIOR (rejeicao de fundo)", lo)):
-        if w >= 0.5 * rng and w >= 2 * body: print(f"  possivel rejeicao de pavio {nome} [criterio-hipotese: pavio >= 50% da amplitude e >= 2x o corpo]")
+        if w >= pr * rng and w >= bm * body: print(f"  possivel rejeicao de pavio {nome} [criterio atual: pavio >= {pr:.0%} da amplitude e >= {bm}x o corpo]")
     if a.atr: print(f"  maior pavio = {max(up, lo)/a.atr:.2f} x ATR")
     print("  Criterio-hipotese a calibrar com exemplos da usuaria (numeros OHLC).")
+
+def tuning_cfg():
+    return load_rules().get("tuning", {})
+
+def cmd_tune(con, a):
+    T = tuning_cfg(); reg = T.get("tunable", {})
+    if a.param in T.get("protected", []) or a.param not in reg:
+        sys.exit(f"REJEITADO: '{a.param}' nao e ajustavel pelo Claude (protegido ou fora do registro). Ajustaveis: {', '.join(reg)}")
+    spec = reg[a.param]
+    if not (spec["min"] <= a.value <= spec["max"]):
+        sys.exit(f"REJEITADO: valor {a.value} fora dos limites [{spec['min']}, {spec['max']}] de {a.param}")
+    need_n = T.get("min_evidence", {}).get(a.evidence_kind, 30)
+    if a.evidence_n < need_n:
+        sys.exit(f"REJEITADO: evidencia insuficiente ({a.evidence_n} {a.evidence_kind}; minimo {need_n}). Nao ajustar com amostra pequena.")
+    if a.evidence_kind == "trades":
+        have = con.execute("SELECT COUNT(*) c FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchone()["c"]
+        if have < a.evidence_n: sys.exit(f"REJEITADO: voce cita {a.evidence_n} trades, mas o banco tem {have} fechados no modo {a.mode}")
+    if a.mode == "real" and not a.user_approved:
+        sys.exit("REJEITADO: no modo real, ajuste so com aprovacao explicita da usuaria (--user-approved, usado apenas depois dela aprovar).")
+    last = con.execute("SELECT at FROM param_changes WHERE reverted=0 ORDER BY at DESC").fetchone()
+    cool = T.get("cooldown_trades", 10)
+    if last:
+        since = con.execute("SELECT COUNT(*) c FROM trades WHERE closed_at > ? AND mode=?", (last["at"], a.mode)).fetchone()["c"]
+        if since < cool: sys.exit(f"REJEITADO: um ajuste de cada vez. Desde o ultimo ajuste so ha {since} trades fechados (minimo {cool}) para medir o efeito.")
+    R = load_rules(); old = get_path(R, spec["path"]); set_path(R, spec["path"], a.value)
+    json.dump(R, open(rules_path(), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    con.execute("INSERT INTO param_changes(at,param,old_value,new_value,reason,evidence_kind,evidence_n,mode) VALUES(?,?,?,?,?,?,?,?)",
+                (now_brt().isoformat(timespec="seconds"), a.param, json.dumps(old), json.dumps(a.value), a.reason, a.evidence_kind, a.evidence_n, a.mode))
+    con.commit(); print(f"ajustado {a.param}: {old} -> {a.value} (motivo: {a.reason}; evidencia: {a.evidence_n} {a.evidence_kind}). Desfazer: tune-revert")
+
+def cmd_tune_history(con, a):
+    rows = con.execute("SELECT * FROM param_changes ORDER BY at DESC").fetchall()
+    if not rows: print("nenhum ajuste de parametros registrado"); return
+    for r in rows:
+        print(f"[{r['id']}] {r['at']} {r['param']}: {r['old_value']} -> {r['new_value']} | {r['reason']} | {r['evidence_n']} {r['evidence_kind']} ({r['mode']})" + (" [DESFEITO]" if r["reverted"] else ""))
+
+def cmd_tune_revert(con, a):
+    r = con.execute("SELECT * FROM param_changes WHERE id=? AND reverted=0", (a.id,)).fetchone()
+    if not r: sys.exit("ajuste nao encontrado ou ja desfeito")
+    spec = tuning_cfg().get("tunable", {}).get(r["param"])
+    if not spec: sys.exit("parametro nao esta mais no registro")
+    R = load_rules(); set_path(R, spec["path"], json.loads(r["old_value"]))
+    json.dump(R, open(rules_path(), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+    con.execute("UPDATE param_changes SET reverted=1 WHERE id=?", (a.id,)); con.commit()
+    print(f"desfeito: {r['param']} voltou para {r['old_value']}")
 
 def cmd_stats(con, a):
     rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
@@ -585,6 +654,11 @@ def main():
     pt.add_argument("--wick-where", choices=["zona", "caminho"])
     for k in ("o", "h", "l", "c"): pt.add_argument("--" + k, type=float)
     wk = sub.add_parser("wick"); [wk.add_argument("--" + k, type=float, required=True) for k in ("open", "high", "low", "close")]; wk.add_argument("--atr", type=float)
+    tn = sub.add_parser("tune"); tn.add_argument("--param", required=True); tn.add_argument("--value", type=float, required=True)
+    tn.add_argument("--reason", required=True); tn.add_argument("--evidence-kind", choices=["trades", "exemplos"], required=True)
+    tn.add_argument("--evidence-n", type=int, required=True); tn.add_argument("--mode", choices=["treino", "real"], default="treino")
+    tn.add_argument("--user-approved", action="store_true")
+    sub.add_parser("tune-history"); tr = sub.add_parser("tune-revert"); tr.add_argument("--id", type=int, required=True)
     st = sub.add_parser("stats"); st.add_argument("--mode", choices=["treino", "real"], default="treino")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")
     sm = sub.add_parser("add-sentiment"); sm.add_argument("--source", required=True); sm.add_argument("--metric", required=True)
@@ -621,7 +695,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 
