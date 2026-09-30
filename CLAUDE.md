@@ -27,6 +27,12 @@ para fazer o dever de casa; so perguntar o que apenas a usuaria sabe). Sem trava
 incremental (`since`). Leitura de par sem mudanca: `renew-read`. Antes de evento importante: plano com direcao (compra/venda).
 Nunca perseguir a manchete. Nao usar noticia fora da janela. Nao aplicar correlacao mecanica.
 
+## Modos e saida
+- Treino (demo): o gate NAO bloqueia a entrada (so registra gate_ok e nota da regiao); limites de capital valem sempre.
+- Real: so depois de resultado positivo em amostra grande; gate LIBERADO obrigatorio.
+- Todo trade: stop obrigatorio, plano de saida definido antes (docs/gestao-saida.md), registrado em `trades` (MFE, devolvido).
+- Stop e alvo ficam como ordens no broker; o Claude ajusta nas checagens, nunca substitui o stop.
+
 ## Arquivos
 - `pine/` scripts Pine (TradingView). `nas100_liquidez_v2.pine` e o atual; nao testado ate o momento.
 - `docs/` metodo, liquidez e regioes, fluxo de analise, risco, setup do MCP, roadmap.

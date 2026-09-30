@@ -15,6 +15,8 @@
 - [x] Regra 3: feriados globais, eventos fora do calendario, plano antecipado com correlacionados, briefing (docs/contexto-feriados-eventos.md)
 - [x] Regra 4: analise raciocinada dos pares em H1/H4 + trava `gate` no codigo (docs/analise-pares.md)
 - [x] Ajustes da usuaria: sem trava de horario, gate = lista de pendencias, noticia incremental, posicionamento obrigatorio, sentimento (docs/sentimento.md)
+- [x] Regra de ganho/saida + modo treino sem travas + tabela trades com MFE e stats (docs/gestao-saida.md)
+- [ ] Escolher e testar variantes de saida A/B/C na demo
 - [ ] Regra do gap e do vies vencido (ainda nao no gate)
 - [ ] Confirmar com a usuaria os niveis de fonte (docs/analise-noticias.md)
 - [ ] Calibrar pontos/tolerancias com a base M15 do NAS100 (usuario precisa fornecer o CSV)

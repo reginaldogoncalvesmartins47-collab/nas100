@@ -249,5 +249,30 @@
       "AAII"
     ],
     "context_only_note": "COT (dados de terca, divulgado na sexta: 8-10 dias de defasagem) e AAII (semanal) sao so contexto estrutural; registrar com --data-date; NAO contam para o minimo de 2 fontes do dia"
+  },
+  "risk": {
+    "_nota": "Limites de capital valem SEMPRE (treino e real). Valores de docs/regras-risco.md.",
+    "per_trade_usd_max": 1.0,
+    "daily_loss_usd": 3.0,
+    "kill_total_usd": 10.0
+  },
+  "operation_mode": {
+    "treino": "demo/Paper Trading: o bot NAO e travado por gate nem por nota; toda entrada e registrada com o estado do gate e a nota da regiao para comparar depois. Limites de capital continuam valendo.",
+    "real": "so depois de resultado positivo em amostra grande no treino: gate LIBERADO obrigatorio e limites de capital rigidos"
+  },
+  "exit_management": {
+    "doc": "docs/gestao-saida.md",
+    "status": "HIPOTESES a testar no treino; decidir com dados (stats)",
+    "at_entry": "stop obrigatorio + alvo 1 (parcial) + alvo final definidos ANTES de entrar; nunca entrar sem stop",
+    "protective_orders": "stop e alvo ficam como ordens NO BROKER; o Claude nao substitui o stop",
+    "progressive": {
+      "breakeven_at_r": 1.0,
+      "partial_at_r": 1.0,
+      "partial_pct": 50,
+      "trail": "abaixo do ultimo fundo (compra) / acima do ultimo topo (venda) em M15/H1, ou ATR"
+    },
+    "exit_on_invalidation": "vies vencido, nivel de invalidacao do plano perdido, par correlacionado virando contra com confirmacao",
+    "time_stop_bars_m15": 8,
+    "log": "tabela trades (MFE/MAE, quanto devolveu, motivo de saida)"
   }
 }

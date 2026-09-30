@@ -11,6 +11,11 @@ Comandos:
   upsert-extra ARQ.json             eventos fora do calendario (cupulas, discursos) - exige published_at com fuso
   add-plan --stance compra|venda --theme T --correlated A,B --position TXT [--event-id N|--extra-id N|--event-time ISO]   plano de posicionamento ANTECIPADO
   close-plan --id N --status concluido|invalidado   encerra plano
+  open-trade --mode treino|real --side compra|venda --entry E --stop S --risk-usd R [--target1 --target2 --size --region-score --bias --plan-id --notes]
+                                    registra entrada. Limites de capital valem SEMPRE; no treino o gate nao bloqueia (so registra); no real bloqueia
+  update-trade --id N --high H --low L [--be-moved]   atualiza maxima/minima desde a ultima vez (mede quanto o trade andou a favor: MFE)
+  close-trade --id N --exit-price P --reason stop|alvo1|alvo2|breakeven|trailing|invalidacao|tempo|evento|manual|fim_dia   fecha e calcula R
+  stats [--mode treino|real]        acerto, R medio, MFE, quanto devolveu, por motivo de saida e por estado do gate
   themes                            temas e ativos correlacionados (rules.json)
   add-read --pair P --tf H1|H4|D1 --trend T --why TXT --implication I --confidence C --invalidation TXT   leitura RACIOCINADA de um par (micro nao aceito)
   reads [--pair P]                  ultima leitura de cada par/tf, com idade
@@ -75,6 +80,13 @@ CREATE TABLE IF NOT EXISTS pair_reads (
 );
 CREATE TABLE IF NOT EXISTS checks (
   id INTEGER PRIMARY KEY, date TEXT NOT NULL, name TEXT NOT NULL, checked_at TEXT NOT NULL, note TEXT
+);
+CREATE TABLE IF NOT EXISTS trades (
+  id INTEGER PRIMARY KEY, mode TEXT NOT NULL, opened_at TEXT NOT NULL, closed_at TEXT, side TEXT NOT NULL,
+  entry REAL NOT NULL, stop REAL NOT NULL, target1 REAL, target2 REAL, size REAL, risk_usd REAL,
+  region_score REAL, bias TEXT, plan_id INTEGER, gate_ok INTEGER, gate_pending TEXT,
+  exit_price REAL, exit_reason TEXT, result_usd REAL, result_r REAL, mfe_r REAL DEFAULT 0, mae_r REAL DEFAULT 0,
+  be_moved INTEGER DEFAULT 0, notes TEXT
 );
 CREATE TABLE IF NOT EXISTS reactions (
   event_id INTEGER PRIMARY KEY REFERENCES events(id),
@@ -348,7 +360,7 @@ def cmd_since(con, a):
     else:
         print(f"Sem checagem de noticias dentro da janela ({label}). Buscar desde {start:%Y-%m-%d %H:%M} BRT.")
 
-def cmd_gate(con, a):
+def gate_eval(con):
     n = now_brt(); d = n.strftime("%Y-%m-%d"); R = load_rules()
     cfg = R.get("gate_3_pairs", {}); fresh = cfg.get("fresh_minutes", {"H1": 60, "H4": 240})
     min_src = R.get("gate_4_sentiment", {}).get("min_sources", 2)
@@ -390,13 +402,85 @@ def cmd_gate(con, a):
             if not r: todo.append((f"sem leitura de {pair} em {tf} (gate 3)", f"add-read --pair {pair} --tf {tf} ... (raciocinar: por que, implicacao, invalidacao)")); continue
             age = (n - parse_ts(r["created_at"])).total_seconds() / 60
             if age > fresh.get(tf, 60): todo.append((f"leitura de {pair} {tf} com {int(age)} min (validade {fresh.get(tf, 60)})", f"ver se algo MUDOU: se nao, renew-read --pair {pair} --tf {tf} --note TXT; se sim, add-read"))
-    print(f"=== GATE {d} {n:%H:%M} BRT ===")
+    return todo, warn, n
+
+def cmd_gate(con, a):
+    todo, warn, n = gate_eval(con)
+    print(f"=== GATE {n:%Y-%m-%d %H:%M} BRT ===")
     if todo:
         print("BLOQUEADO. PRIORIDADE: concluir as pendencias abaixo, na ordem. Nao parar e nao pedir permissao para fazer o dever de casa;\nso perguntar a usuaria o que apenas ela sabe.")
         for i, (m, h) in enumerate(todo, 1): print(f" {i}. {m}\n    como: {h}")
     else: print("LIBERADO para analisar entrada (nao e sinal: regiao, reacao e risco ainda precisam passar).")
     for w in warn: print("  aviso:", w)
     sys.exit(1 if todo else 0)
+
+def risk_cfg():
+    r = load_rules().get("risk", {})
+    return r.get("per_trade_usd_max", 1.0), r.get("daily_loss_usd", 3.0), r.get("kill_total_usd", 10.0)
+
+def cmd_open_trade(con, a):
+    per, daily, kill = risk_cfg(); n = now_brt(); d = n.strftime("%Y-%m-%d"); dist = abs(a.entry - a.stop)
+    if dist <= 0 or (a.side == "compra" and a.stop >= a.entry) or (a.side == "venda" and a.stop <= a.entry):
+        sys.exit("REJEITADO: stop invalido (obrigatorio e do lado certo). Nunca entrar sem stop.")
+    if a.risk_usd > per: sys.exit(f"REJEITADO: risco US$ {a.risk_usd} acima do maximo por trade US$ {per}. Limite de capital vale sempre (treino e real).")
+    today = con.execute("SELECT COALESCE(SUM(result_usd),0) s FROM trades WHERE mode=? AND closed_at LIKE ?", (a.mode, d + "%")).fetchone()["s"]
+    total = con.execute("SELECT COALESCE(SUM(result_usd),0) s FROM trades WHERE mode=? AND closed_at IS NOT NULL", (a.mode,)).fetchone()["s"]
+    if today <= -daily: sys.exit(f"REJEITADO: perda do dia US$ {today:.2f} atingiu o limite US$ {daily}. Parar por hoje.")
+    if total <= -kill: sys.exit(f"REJEITADO: perda total US$ {total:.2f} atingiu o corte US$ {kill}. Parar e revisar tudo.")
+    todo, warn, _ = gate_eval(con)
+    if todo and a.mode == "real":
+        print("REJEITADO (modo real exige gate LIBERADO). Pendencias:"); [print(" -", m) for m, _h in todo]; sys.exit(1)
+    if todo: print(f"treino: entrada PERMITIDA e registrada com gate_ok=0 ({len(todo)} pendencia(s)); sera comparada nas estatisticas.")
+    con.execute("""INSERT INTO trades(mode,opened_at,side,entry,stop,target1,target2,size,risk_usd,region_score,bias,plan_id,gate_ok,gate_pending,notes)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (a.mode, n.isoformat(timespec="seconds"), a.side, a.entry, a.stop, a.target1, a.target2, a.size, a.risk_usd,
+                 a.region_score, a.bias, a.plan_id, 0 if todo else 1, "; ".join(m for m, _h in todo) or None, a.notes))
+    con.commit(); print("trade aberto, id", con.execute("SELECT last_insert_rowid()").fetchone()[0])
+
+def excursion(r, high, low):
+    dist = abs(r["entry"] - r["stop"]); sgn = 1 if r["side"] == "compra" else -1
+    fav = ((high if sgn == 1 else low) - r["entry"]) * sgn / dist
+    adv = ((low if sgn == 1 else high) - r["entry"]) * sgn / dist
+    return fav, adv
+
+def cmd_update_trade(con, a):
+    r = con.execute("SELECT * FROM trades WHERE id=? AND closed_at IS NULL", (a.id,)).fetchone()
+    if not r: sys.exit("trade nao encontrado ou ja fechado")
+    fav, adv = excursion(r, a.high, a.low)
+    mfe, mae = max(r["mfe_r"] or 0, fav), min(r["mae_r"] or 0, adv)
+    be = 1 if a.be_moved else r["be_moved"]
+    con.execute("UPDATE trades SET mfe_r=?, mae_r=?, be_moved=? WHERE id=?", (mfe, mae, be, a.id)); con.commit()
+    print(f"MFE={mfe:.2f}R MAE={mae:.2f}R" + (" | stop movido para break-even" if be else ""))
+
+def cmd_close_trade(con, a):
+    r = con.execute("SELECT * FROM trades WHERE id=? AND closed_at IS NULL", (a.id,)).fetchone()
+    if not r: sys.exit("trade nao encontrado ou ja fechado")
+    dist = abs(r["entry"] - r["stop"]); sgn = 1 if r["side"] == "compra" else -1
+    res_r = round((a.exit_price - r["entry"]) * sgn / dist, 3) or 0.0
+    fav, adv = excursion(r, max(a.exit_price, a.high or a.exit_price), min(a.exit_price, a.low or a.exit_price))
+    mfe, mae = max(r["mfe_r"] or 0, fav), min(r["mae_r"] or 0, adv)
+    usd = round(res_r * r["risk_usd"], 2) if r["risk_usd"] else None
+    con.execute("""UPDATE trades SET closed_at=?, exit_price=?, exit_reason=?, result_r=?, result_usd=?, mfe_r=?, mae_r=?,
+                   notes=COALESCE(?,notes) WHERE id=?""",
+                (now_brt().isoformat(timespec="seconds"), a.exit_price, a.reason, round(res_r, 3), usd, mfe, mae, a.notes, a.id))
+    con.commit(); print(f"fechado: {res_r:+.2f}R (US$ {usd}) | MFE {mfe:.2f}R | devolveu {mfe - res_r:.2f}R | motivo {a.reason}")
+
+def cmd_stats(con, a):
+    rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
+    if not rows: print(f"sem trades fechados no modo {a.mode}"); return
+    avg = lambda xs: sum(xs) / len(xs) if xs else 0
+    R = [r["result_r"] for r in rows]; give = [(r["mfe_r"] or 0) - r["result_r"] for r in rows]
+    rev = [r for r in rows if (r["mfe_r"] or 0) >= 1 and r["result_r"] <= 0]
+    print(f"Modo {a.mode}: {len(rows)} trades | acerto {100*sum(1 for x in R if x>0)/len(R):.0f}% | R medio {avg(R):+.2f} | MFE medio {avg([r['mfe_r'] or 0 for r in rows]):.2f}R | devolvido em media {avg(give):.2f}R")
+    print(f"Chegaram a +1R e terminaram em 0 ou negativo: {len(rev)} de {len(rows)} (argumento para parcial/break-even)")
+    print("Por motivo de saida:")
+    for k in sorted({r["exit_reason"] for r in rows}):
+        g = [r for r in rows if r["exit_reason"] == k]; print(f"  {k}: {len(g)} trades, R medio {avg([x['result_r'] for x in g]):+.2f}")
+    print("Por estado do gate na entrada (treino: compara o efeito de cada dever de casa):")
+    for v, lab in ((1, "gate OK"), (0, "gate com pendencias")):
+        g = [r for r in rows if r["gate_ok"] == v]
+        if g: print(f"  {lab}: {len(g)} trades, R medio {avg([x['result_r'] for x in g]):+.2f}")
+    print("Amostra pequena nao prova nada: olhar 30-50 trades.")
 
 def find(con, a):
     r = con.execute("SELECT id FROM events WHERE date=? AND time_brt=? AND event=?", (a.date, a.time, a.event)).fetchone()
@@ -421,6 +505,18 @@ def main():
     sub.add_parser("init")
     u = sub.add_parser("upsert"); u.add_argument("file")
     sub.add_parser("window")
+    ot = sub.add_parser("open-trade")
+    ot.add_argument("--mode", choices=["treino", "real"], required=True); ot.add_argument("--side", choices=["compra", "venda"], required=True)
+    ot.add_argument("--entry", type=float, required=True); ot.add_argument("--stop", type=float, required=True)
+    ot.add_argument("--target1", type=float); ot.add_argument("--target2", type=float); ot.add_argument("--size", type=float)
+    ot.add_argument("--risk-usd", type=float, required=True); ot.add_argument("--region-score", type=float)
+    ot.add_argument("--bias"); ot.add_argument("--plan-id", type=int); ot.add_argument("--notes")
+    ut = sub.add_parser("update-trade"); ut.add_argument("--id", type=int, required=True)
+    ut.add_argument("--high", type=float, required=True); ut.add_argument("--low", type=float, required=True); ut.add_argument("--be-moved", action="store_true")
+    ct = sub.add_parser("close-trade"); ct.add_argument("--id", type=int, required=True); ct.add_argument("--exit-price", type=float, required=True)
+    ct.add_argument("--reason", required=True, choices=["stop", "alvo1", "alvo2", "breakeven", "trailing", "invalidacao", "tempo", "evento", "manual", "fim_dia"])
+    ct.add_argument("--high", type=float); ct.add_argument("--low", type=float); ct.add_argument("--notes")
+    st = sub.add_parser("stats"); st.add_argument("--mode", choices=["treino", "real"], default="treino")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")
     sm = sub.add_parser("add-sentiment"); sm.add_argument("--source", required=True); sm.add_argument("--metric", required=True)
     sm.add_argument("--value"); sm.add_argument("--data-date"); sm.add_argument("--reading", choices=["risk_on", "risk_off", "neutro", "misto"], required=True); sm.add_argument("--note")
@@ -456,7 +552,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 
