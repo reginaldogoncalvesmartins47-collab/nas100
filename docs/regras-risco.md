@@ -21,3 +21,14 @@ Se o lote minimo exigir risco maior que o permitido para o stop do setup, NAO op
 ## Backtest no TradingView
 Para validar logica (nao a conta de US$ 30): modo teste ligado, capital 1000, limites diario/total altos.
 Comparar em R (multiplos do risco), nao em dolares. Sem o ajuste, o corte de seguranca desliga o teste cedo.
+
+## O que para o bot e o que so avisa
+| Regra | Treino (demo) | Real |
+|---|---|---|
+| Stop obrigatorio e do lado certo | **Para** | **Para** |
+| Risco maximo por trade (US$ 1) | **Para** | **Para** |
+| Perda maxima do dia (US$ 3) | So avisa e registra "no real teria parado" | **Para** |
+| Corte total (US$ 10) | So avisa e registra | **Para** |
+| Gate / nota da regiao | So registra | Gate obrigatorio; nota minima vale |
+| Numero de trades | Sem limite | Sem limite |
+Motivo: na demo o dinheiro e ficticio e parar cedo interromperia a coleta de dados que permite aprender rapido.

@@ -36,7 +36,7 @@ incremental (`since`). Leitura de par sem mudanca: `renew-read`. Antes de evento
 Nunca perseguir a manchete. Nao usar noticia fora da janela. Nao aplicar correlacao mecanica.
 
 ## Modos e saida
-- Treino (demo): o gate NAO bloqueia a entrada (so registra gate_ok e nota da regiao); limites de capital valem sempre.
+- Treino (demo): NAO trava por gate, nota, perda do dia nem corte total (estes so avisam e registram 'no real teria parado'). Valem sempre: stop obrigatorio e risco maximo por trade.
 - Real: so depois de resultado positivo em amostra grande; gate LIBERADO obrigatorio.
 - Todo trade: stop obrigatorio, plano de saida definido antes (docs/gestao-saida.md), registrado em `trades` (MFE, devolvido).
 - Stop e alvo ficam como ordens no broker; o Claude ajusta nas checagens, nunca substitui o stop.

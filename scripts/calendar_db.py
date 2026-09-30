@@ -480,8 +480,16 @@ def cmd_open_trade(con, a):
     if a.risk_usd > per: sys.exit(f"REJEITADO: risco US$ {a.risk_usd} acima do maximo por trade US$ {per}. Limite de capital vale sempre (treino e real).")
     today = con.execute("SELECT COALESCE(SUM(result_usd),0) s FROM trades WHERE mode=? AND closed_at LIKE ?", (a.mode, d + "%")).fetchone()["s"]
     total = con.execute("SELECT COALESCE(SUM(result_usd),0) s FROM trades WHERE mode=? AND closed_at IS NOT NULL", (a.mode,)).fetchone()["s"]
-    if today <= -daily: sys.exit(f"REJEITADO: perda do dia US$ {today:.2f} atingiu o limite US$ {daily}. Parar por hoje.")
-    if total <= -kill: sys.exit(f"REJEITADO: perda total US$ {total:.2f} atingiu o corte US$ {kill}. Parar e revisar tudo.")
+    would_stop = []
+    if today <= -daily:
+        if a.mode == "real": sys.exit(f"REJEITADO: perda do dia US$ {today:.2f} atingiu o limite US$ {daily}. Parar por hoje.")
+        would_stop.append(f"perda do dia US$ {today:.2f} passou do limite US$ {daily}")
+    if total <= -kill:
+        if a.mode == "real": sys.exit(f"REJEITADO: perda total US$ {total:.2f} atingiu o corte US$ {kill}. Parar e revisar tudo.")
+        would_stop.append(f"perda total US$ {total:.2f} passou do corte US$ {kill}")
+    if would_stop:
+        print("AVISO (treino: NAO para, para nao interromper o aprendizado): no REAL o bot pararia aqui -> " + "; ".join(would_stop))
+        a.notes = ((a.notes + " | ") if a.notes else "") + "no real teria parado: " + "; ".join(would_stop)
     todo, warn, _ = gate_eval(con)
     if todo and a.mode == "real":
         print("REJEITADO (modo real exige gate LIBERADO). Pendencias:"); [print(" -", m) for m, _h in todo]; sys.exit(1)

@@ -256,8 +256,8 @@
     "_sem_limite_de_trades": "decisao da usuaria: sem limite de numero de trades; a perda do dia e o corte total contem o excesso"
   },
   "operation_mode": {
-    "treino": "demo/Paper Trading: o bot NAO e travado por gate nem por nota; toda entrada e registrada com o estado do gate e a nota da regiao para comparar depois. Limites de capital continuam valendo.",
-    "real": "so depois de resultado positivo em amostra grande no treino: gate LIBERADO obrigatorio e limites de capital rigidos"
+    "treino": "demo/Paper Trading: o bot NAO e travado por gate, nota da regiao, perda do dia nem corte total (esses dois so AVISAM e registram 'no real teria parado'). Continuam valendo no treino: stop obrigatorio e risco maximo por trade. Tudo e registrado para comparar depois.",
+    "real": "so depois de resultado positivo em amostra grande: gate LIBERADO, perda do dia e corte total PARAM o bot, stop e risco maximo por trade"
   },
   "exit_management": {
     "doc": "docs/gestao-saida.md",
