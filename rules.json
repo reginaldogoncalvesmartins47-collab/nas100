@@ -233,17 +233,21 @@
     "enforced_by": "scripts/calendar_db.py gate (semaforo com lista de pendencias; renew-read quando nada mudou)"
   },
   "gate_4_sentiment": {
-    "rule": "Antes de qualquer entrada, registrar o sentimento do mercado em pelo menos 2 fontes no dia.",
+    "rule": "Antes de qualquer entrada, registrar o sentimento do mercado em pelo menos 2 fontes DO DIA (fontes semanais nao contam).",
     "min_sources": 2,
     "doc": "docs/sentimento.md",
     "candidate_sources": [
       "Finviz (mapa de calor por setor, futuros, noticias)",
       "CNN Fear & Greed",
       "CBOE put/call",
-      "AAII (semanal)",
-      "CFTC COT (semanal, sexta)",
       "VIX (ja coberto em gate_3_pairs)"
     ],
-    "access": "como o Investing: so por leitura da pagina no navegador (extensao), sem scraper; conferir termos de cada site"
+    "access": "como o Investing: so por leitura da pagina no navegador (extensao), sem scraper; conferir termos de cada site",
+    "context_only": [
+      "COT",
+      "CFTC",
+      "AAII"
+    ],
+    "context_only_note": "COT (dados de terca, divulgado na sexta: 8-10 dias de defasagem) e AAII (semanal) sao so contexto estrutural; registrar com --data-date; NAO contam para o minimo de 2 fontes do dia"
   }
 }

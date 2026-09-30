@@ -1,7 +1,7 @@
 # Regra 5: sentimento do mercado (antes de qualquer entrada)
 
 Decisao da usuaria: o Claude precisa entender o sentimento do mercado, usando Finviz e outras fontes.
-O gate exige **pelo menos 2 fontes registradas no dia** (`add-sentiment`).
+O gate exige **pelo menos 2 fontes do dia** (semanais como COT e AAII nao contam) (`add-sentiment`).
 
 ## Fontes candidatas (a usuaria ajusta)
 | Fonte | O que mostra | Observacao |
@@ -9,9 +9,14 @@ O gate exige **pelo menos 2 fontes registradas no dia** (`add-sentiment`).
 | Finviz | Mapa de calor por setor/acao, futuros, noticias | Conferir se o dado gratuito vem atrasado; nao confirmado |
 | CNN Fear & Greed | Indice de medo/ganancia | Diario |
 | CBOE put/call | Protecao vs aposta de alta em opcoes | Nao confirmado o acesso gratuito |
-| AAII | Pesquisa de sentimento de investidores | Semanal |
-| CFTC COT | Posicionamento de grandes agentes em futuros | Semanal (divulgado na sexta) |
 | VIX | Medo implicito | Ja coberto pela leitura dos pares (H1/H4) |
+
+## Somente contexto (NAO contam para o minimo do gate)
+| Fonte | Por que fica de fora |
+|---|---|
+| CFTC COT | Dados de terca, divulgados na sexta: hoje (quarta 30/09) o mais recente e de 22/09, 8 dias; pode chegar a ~10. Lento demais para decidir entrada (observacao da usuaria; calendario de divulgacao: pelo que sei, nao confirmado aqui) |
+| AAII | Semanal |
+Podem ser registrados como pano de fundo estrutural, **sempre com a data do dado** (`--data-date`), para nao serem lidos como atuais.
 
 ## Como registrar
 `python scripts/calendar_db.py add-sentiment --source Finviz --metric "mapa setorial" --reading risk_on|risk_off|neutro|misto --value V --note N`

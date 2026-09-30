@@ -17,7 +17,7 @@ Comandos:
   mark-checked --name calendar|holidays|extra_events|news [--note]   registra que verificou (inclusive 'nada relevante')
   gate                              semaforo: LIBERADO ou BLOQUEADO com a LISTA de pendencias a concluir (sem trava de horario)
   since                             ultima checagem de noticias: buscar so o que saiu depois (incremental)
-  add-sentiment --source S --metric M --reading risk_on|risk_off|neutro|misto [--value V --note N]   sentimento do mercado (Finviz e outras)
+  add-sentiment --source S --metric M --reading risk_on|risk_off|neutro|misto [--value V --data-date AAAA-MM-DD --note N]   sentimento do mercado (Finviz e outras)
   renew-read --pair P --tf TF --note TXT   renova leitura quando NADA mudou (sem reescrever)
   news [--hours N] [--max-tier 2]   lista noticias DENTRO da janela (padrao) por nivel de fonte
   today [--date AAAA-MM-DD] [--min-stars N]   lista eventos do dia
@@ -321,9 +321,13 @@ def cmd_mark_checked(con, a):
     con.commit(); print("verificacao registrada:", a.name)
 
 def cmd_add_sentiment(con, a):
+    note = a.note
+    if a.data_date:
+        age = (now_brt().date() - datetime.fromisoformat(a.data_date).date()).days
+        note = f"{note + ' | ' if note else ''}dado de {a.data_date} (defasagem {age} dias)"
     con.execute("INSERT INTO sentiment_reads(created_at,source,metric,value,reading,note) VALUES(?,?,?,?,?,?)",
-                (now_brt().isoformat(timespec="seconds"), a.source, a.metric, a.value, a.reading, a.note))
-    con.commit(); print("sentimento gravado")
+                (now_brt().isoformat(timespec="seconds"), a.source, a.metric, a.value, a.reading, note))
+    con.commit(); print("sentimento gravado" + (f" (defasagem {age} dias)" if a.data_date else ""))
 
 def cmd_renew_read(con, a):
     r = con.execute("SELECT * FROM pair_reads WHERE pair=? AND tf=? ORDER BY created_at DESC", (a.pair, a.tf)).fetchone()
@@ -364,9 +368,11 @@ def cmd_gate(con, a):
     else:
         age = (n - parse_ts(c["checked_at"])).total_seconds() / 60
         if age > news_warn: warn.append(f"ultima checagem de noticias ha {int(age)} min: fazer checagem INCREMENTAL (rode `since`); nao rever o que ja esta no banco")
-    srcs = con.execute("SELECT COUNT(DISTINCT source) c FROM sentiment_reads WHERE created_at LIKE ?", (d + "%",)).fetchone()["c"]
+    ctx_only = [x.lower() for x in R.get("gate_4_sentiment", {}).get("context_only", [])]
+    srcs = len({r["source"] for r in con.execute("SELECT source FROM sentiment_reads WHERE created_at LIKE ?", (d + "%",))
+                if not any(c in r["source"].lower() for c in ctx_only)})
     if srcs < min_src:
-        todo.append((f"sentimento do mercado: {srcs} fonte(s) hoje, minimo {min_src} (gate 4)", "ler Finviz e outras fontes (ver docs/sentimento.md) -> add-sentiment --source S --metric M --reading risk_on|risk_off|neutro|misto"))
+        todo.append((f"sentimento do mercado: {srcs} fonte(s) do dia (semanais como COT/AAII nao contam), minimo {min_src} (gate 4)", "ler Finviz e outras fontes (ver docs/sentimento.md) -> add-sentiment --source S --metric M --reading risk_on|risk_off|neutro|misto"))
     plan_ref = {(r["ref_table"], r["ref_id"]) for r in con.execute("SELECT ref_table,ref_id FROM plans WHERE status!='invalidado' AND COALESCE(anticipated,1)!=0 AND stance IS NOT NULL")}
     for e in con.execute("SELECT * FROM events WHERE date=? AND COALESCE(stars,0)>=3", (d,)):
         if ("events", e["id"]) not in plan_ref:
@@ -417,7 +423,7 @@ def main():
     sub.add_parser("window")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")
     sm = sub.add_parser("add-sentiment"); sm.add_argument("--source", required=True); sm.add_argument("--metric", required=True)
-    sm.add_argument("--value"); sm.add_argument("--reading", choices=["risk_on", "risk_off", "neutro", "misto"], required=True); sm.add_argument("--note")
+    sm.add_argument("--value"); sm.add_argument("--data-date"); sm.add_argument("--reading", choices=["risk_on", "risk_off", "neutro", "misto"], required=True); sm.add_argument("--note")
     rr = sub.add_parser("renew-read"); rr.add_argument("--pair", required=True); rr.add_argument("--tf", required=True); rr.add_argument("--note", required=True)
     ar = sub.add_parser("add-read")
     ar.add_argument("--pair", required=True); ar.add_argument("--tf", required=True)
