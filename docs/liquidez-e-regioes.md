@@ -30,7 +30,11 @@ de TF muito pequeno (ruído de M1/M5).
 ## 3. Fibonacci em TF maior
 - **Desenhar no H1** (H), ancorando no **último movimento relevante**: do pivô de fundo ao pivô de topo (ou o
   inverso) do leg que **quebrou estrutura**. Regra objetiva: usar os pivôs do H1, sem escolher "a olho".
-- **Zona de reação:** 0,5 a 0,786 (níveis: 0,5 / 0,618 / 0,786). A zona vale como **região**, não como ponto.
+- **Níveis operáveis (lista configurável, todos valem):** 0,236 / 0,382 / 0,5 / 0,618 / 0,786. Nenhum nível tem
+  prioridade a priori: a força de cada um vem da **confluência** e da **reação do mercado**, não do número.
+  Cada nível vale como **região** (faixa), não como ponto. O peso de cada nível é calibrado com dados (seção 7).
+- A lista fica **limpa e sem viés**: o robô não "prefere" o 0,618. Quem diz se o nível funciona é o mercado.
+- Ver caso real: `docs/casos/caso-01-nas100-h1.md` (reação em 0,382, não em 0,5-0,786).
 - Fibo em TF pequeno (M1/M5) gera muitas zonas e pouca informação: não usar como região principal.
 - Redesenhar só quando um novo leg quebrar estrutura (evita "fibo que muda toda hora").
 
@@ -40,7 +44,7 @@ H: 0,3 x ATR(H1) um do outro.
 
 | Fator | Pontos (H) |
 |---|---|
-| Zona de Fibo H1 (0,5-0,786) | +1 |
+| Nível de Fibo H1 (qualquer da lista) | +1 (peso por nível a calibrar) |
 | Máxima/mínima do dia anterior (PDH/PDL) | +1 |
 | Máxima/mínima da semana anterior (PWH/PWL) | +2 |
 | Máxima/mínima de sessão (Ásia/Londres) | +1 |
@@ -54,7 +58,8 @@ H: 0,3 x ATR(H1) um do outro.
   anterior em 29.470 (+1) e equal lows em 29.475 (+1) = nota 3: região válida.
 
 ## 5. Da região à entrada
-Região pontuada é só o "onde". A entrada exige **tudo** isto:
+Região pontuada é só o "onde". **O gatilho é o mercado:** a entrada só sai quando o preço, dentro da região,
+mostra reação (varredura válida + fechamento de volta, ou a confirmação que o usuário definir). A entrada exige **tudo** isto:
 1. Região com nota mínima.
 2. Gatilho: varredura válida + fechamento de volta (ou o critério de confirmação que o usuário definir).
 3. Espaço até o alvo (próxima liquidez oposta) com RR mínimo (H: 2:1).
