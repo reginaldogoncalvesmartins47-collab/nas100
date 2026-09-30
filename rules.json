@@ -1,0 +1,52 @@
+{
+  "_status": "RASCUNHO: todos os numeros sao hipoteses a calibrar com dados. Modo: somente sinal, sem ordens.",
+  "instrument": "PEPPERSTONE:NAS100",
+  "session_brt": "06:00-23:20",
+  "days": "seg-sex",
+  "bias_source": "usuario (macro do dia: Brent, juros, ES, calendario, geopolitica)",
+  "regions": {
+    "tf_primary": "H1",
+    "tf_refine": "M15",
+    "fib_levels": [0.236, 0.382, 0.5, 0.618, 0.786],
+    "fib_anchor": "pivos do H1 no ultimo leg que quebrou estrutura (H)",
+    "liquidity": ["PDH", "PDL", "PWH", "PWL", "ASIA_HL", "LONDON_HL", "EQH", "EQL"],
+    "cluster_width_atr_h1": 0.3,
+    "score": {
+      "fib_h1_level": 1,
+      "pdh_pdl": 1,
+      "pwh_pwl": 2,
+      "session_hl": 1,
+      "equal_hl": 1,
+      "fvg_unmitigated": 1,
+      "round_number": 0.5,
+      "previous_reaction": 1,
+      "fib_m15_inside_h1_region": 0.5
+    },
+    "min_score_with_macro": 3,
+    "min_score_against_macro": 4
+  },
+  "optional_factors": {
+    "smc_luxalgo": {
+      "enabled": false,
+      "factors": ["order_block", "premium_discount", "choch_bos", "eqh_eql"],
+      "note": "Requer versao derivada com saidas numericas (licenca CC BY-NC-SA 4.0, uso pessoal, manter atribuicao)."
+    }
+  },
+  "analysis_trigger": {
+    "type": "price_near_region",
+    "distance_atr_m15": 0.5,
+    "check_interval_min": 5
+  },
+  "entry_gate": {
+    "all_required": [
+      "region_score >= minimo (com ou contra a macro)",
+      "reacao do mercado na regiao (varredura valida + fechamento de volta, ou confirmacao definida pelo usuario)",
+      "RR ate a proxima liquidez oposta >= 2",
+      "dentro do horario de operacao",
+      "limites de risco ok (docs/regras-risco.md)"
+    ],
+    "against_macro": "nota maior, risco menor, saida curta (ex.: meio do range)"
+  },
+  "risk_ref": "docs/regras-risco.md",
+  "mode": "signal_only"
+}

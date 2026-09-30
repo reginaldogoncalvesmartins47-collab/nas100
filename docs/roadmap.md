@@ -7,6 +7,7 @@
 - [x] Regiao 2 (Fibo M15 como refinamento) registrada em docs/liquidez-e-regioes.md
 - [ ] Confirmar com o usuario como ancorar a Fibo M15
 - [ ] Definir com o usuario o fim da lateralizacao e a volta da macro (caso 01)
+- [x] Decisao v1: liquidez + Fibo; SMC como fator opcional futuro (rules.json, docs/fluxo-analise.md)
 - [ ] Calibrar pontos/tolerancias com a base M15 do NAS100 (usuario precisa fornecer o CSV)
 - [ ] Compilar e rodar v2 no Pine Editor (M15, modo teste, capital 1000, limites altos)
 - [ ] Ler backtest e lista de negociacoes; ajustar niveis/gatilho

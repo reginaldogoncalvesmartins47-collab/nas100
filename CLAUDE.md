@@ -20,7 +20,8 @@ Ajudar o usuario a operar o NAS100 (PEPPERSTONE:NAS100): ler o grafico no Tradin
 
 ## Arquivos
 - `pine/` scripts Pine (TradingView). `nas100_liquidez_v2.pine` e o atual; nao testado ate o momento.
-- `docs/` metodo, risco, setup do MCP, roadmap.
+- `docs/` metodo, liquidez e regioes, fluxo de analise, risco, setup do MCP, roadmap.
+- `rules.json` regras do metodo em formato de maquina (rascunho, hipoteses).
 - `journal/` diario de trades (CSV).
 
 ## Estado
