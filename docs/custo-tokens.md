@@ -3,6 +3,16 @@
 Status: **sem medicao ainda**. Nao conheco o plano da usuaria nem os precos atuais; nao ha valor em dolar aqui de proposito.
 A primeira tarefa e MEDIR (secao 4).
 
+## 0. Plano da usuaria: Pro (informado por ela)
+- No Pro nao se paga por token: existe um **limite de uso** que se renova por periodos (a usuaria ja viu um reset as 22h).
+  Os limites exatos mudam e eu nao os conheco; conferir no site e na conta.
+- O uso do Claude Code provavelmente divide o limite com o uso do chat (a confirmar).
+- Consequencia: um Claude checando tudo de 5 em 5 minutos o dia inteiro **tende a estourar o limite do Pro** (nao medido).
+  O desenho orientado a evento deixa de ser otimizacao e passa a ser **requisito**.
+- Se mesmo assim nao couber: opcoes sao um plano com mais uso ou a API paga por token (custo previsivel depois de medir).
+- Teste em fases: **Fase A** = janela curta por dia na demo (ex.: 1-2 h) medindo consumo; **Fase B** = ampliar so se couber.
+- Medir: comandos `/cost` e `/usage` do Claude Code (conferir o que cada um mostra na versao dela).
+
 ## 1. O que faz o consumo subir
 - **Checar de 5 em 5 minutos com o Claude** durante 06:00-23:20 sao ~200 checagens por dia. Se cada uma exigir ler regras,
   ler velas de varios pares e raciocinar, o total diario vira milhoes de tokens (ordem de grandeza, nao medido).
