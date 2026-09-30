@@ -121,6 +121,15 @@
       "confianca: confirmado/reportado/rumor",
       "persistencia: pontual/regime"
     ],
-    "gap_stale_atr_h1": 1.0
+    "gap_stale_atr_h1": 1.0,
+    "window": {
+      "sun_mon_sat": "desde a sexta-feira 00:00 BRT ate agora",
+      "tue_to_fri": "ultimas 24 horas ate agora",
+      "enforced_by": "scripts/calendar_db.py (window / news / upsert-news): a janela e calculada pelo codigo, nao pelo julgamento de quem busca",
+      "timestamp": "data e hora de publicacao com fuso obrigatorias; sem fuso = rejeitada; convertida para BRT",
+      "outside_window": "noticia fora da janela nunca e usada como explicacao do movimento; so historico",
+      "empty_window": "se nao houver noticia dentro da janela, dizer isso; NUNCA recorrer a noticia mais antiga para explicar o movimento",
+      "holidays": "feriado dos EUA na segunda: janela a revisar (nao tratado)"
+    }
   }
 }

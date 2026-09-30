@@ -11,6 +11,7 @@
 - [x] Regra 1: analise do calendario economico antes de qualquer entrada (docs/analise-calendario.md)
 - [x] Banco local do calendario (SQLite) com estrelas, surpresa e reacao do NAS (scripts/calendar_db.py)
 - [x] Fase 2: analise de noticias e regra do gap/vies vencido (docs/analise-noticias.md, tabela news)
+- [x] Janela de informacao: dom/seg desde sexta 00:00; ter-sex ultimas 24 h; data/hora obrigatorias (codigo)
 - [ ] Confirmar com a usuaria os niveis de fonte (docs/analise-noticias.md)
 - [ ] Calibrar pontos/tolerancias com a base M15 do NAS100 (usuario precisa fornecer o CSV)
 - [ ] Compilar e rodar v2 no Pine Editor (M15, modo teste, capital 1000, limites altos)

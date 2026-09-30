@@ -5,14 +5,15 @@ Comandos:
   init                              cria o banco
   upsert ARQUIVO.json               grava/atualiza eventos (lista de objetos)
   upsert-news ARQUIVO.json          grava noticias (exige data/hora de publicacao)
-  news [--hours 48] [--max-tier 2]  lista noticias recentes por nivel de fonte
+  window                            mostra a janela de informacao de agora
+  news [--hours N] [--max-tier 2]   lista noticias DENTRO da janela (padrao) por nivel de fonte
   today [--date AAAA-MM-DD] [--min-stars N]   lista eventos do dia
   set-actual --date D --time HH:MM --event NOME --actual VALOR   grava o realizado e calcula a surpresa
   add-reaction --date D --time HH:MM --event NOME --before P --m5 P --m15 P --m60 P   reacao do NAS100 ao evento
 Banco padrao: data/calendario.db (variavel CAL_DB ou --db para mudar). Fonte dos dados: Investing (via extensao).
 """
 import argparse, json, os, re, sqlite3, sys
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 DB_DEFAULT = os.environ.get("CAL_DB", os.path.join(os.path.dirname(__file__), "..", "data", "calendario.db"))
 SCHEMA = """
@@ -79,23 +80,60 @@ def cmd_today(con, a):
     for r in rows:
         print(f"{r['time_brt']} {r['country']} {'*'*(r['stars'] or 0):<3} {r['event']} | atual={r['actual']} proj={r['forecast']} ant={r['previous']} surpresa={r['surprise']}")
 
+BRT = timezone(timedelta(hours=-3))  # Brasilia: sem horario de verao desde 2019 (evita depender de banco de fusos no Windows)
+
+def now_brt():
+    v = os.environ.get("CAL_NOW")  # so para testes: CAL_NOW=2026-09-28T10:00:00-03:00
+    return datetime.fromisoformat(v).astimezone(BRT) if v else datetime.now(BRT)
+
+def parse_ts(s):
+    dt = datetime.fromisoformat(str(s).replace("Z", "+00:00"))
+    if dt.tzinfo is None:
+        raise ValueError("data/hora sem fuso")
+    return dt.astimezone(BRT)
+
+def window_start(n):
+    """Dom/Seg (e sab): desde sexta 00:00 BRT. Ter-Sex: ultimas 24 h."""
+    wd = n.weekday()  # seg=0 ... dom=6
+    if wd in (5, 6, 0):
+        back = {0: 3, 6: 2, 5: 1}[wd]
+        return (n - timedelta(days=back)).replace(hour=0, minute=0, second=0, microsecond=0), "desde sexta-feira 00:00 BRT"
+    return n - timedelta(hours=24), "ultimas 24 horas"
+
+def cmd_window(con, a):
+    n = now_brt(); start, label = window_start(n)
+    print(f"Agora: {n:%Y-%m-%d %H:%M} BRT | janela: {label} | inicio: {start:%Y-%m-%d %H:%M} BRT")
+
 def cmd_upsert_news(con, a):
+    n = now_brt(); start, _ = window_start(n)
     items = json.load(open(a.file, encoding="utf-8"))
-    for n in items:
-        if not n.get("published_at"):
-            sys.exit(f"noticia sem data/hora de publicacao (descartada pela regra): {n.get('headline')}")
+    for it in items:
+        try:
+            ts = parse_ts(it.get("published_at"))
+        except Exception:
+            sys.exit(f"REJEITADA (sem data/hora com fuso): {it.get('headline')}")
+        if ts < start:
+            print(f"aviso: fora da janela ({ts:%Y-%m-%d %H:%M} BRT), gravada so como historico: {it['headline']}")
         con.execute("""INSERT OR IGNORE INTO news(published_at,captured_at,headline,source,tier,url,category,impact_nas,
                        confidence,persistence,verified_by,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
-                    (n["published_at"], now(), n["headline"], n["source"], n.get("tier"), n.get("url"), n.get("category"),
-                     n.get("impact_nas"), n.get("confidence"), n.get("persistence"), n.get("verified_by"), n.get("notes")))
+                    (ts.isoformat(timespec="minutes"), now(), it["headline"], it["source"], it.get("tier"), it.get("url"),
+                     it.get("category"), it.get("impact_nas"), it.get("confidence"), it.get("persistence"),
+                     it.get("verified_by"), it.get("notes")))
     con.commit(); print(f"{len(items)} noticia(s) processada(s)")
 
 def cmd_news(con, a):
-    rows = con.execute("SELECT * FROM news WHERE datetime(published_at) >= datetime('now', ?) AND COALESCE(tier,9)<=? "
-                       "ORDER BY published_at DESC", (f"-{a.hours} hours", a.max_tier)).fetchall()
-    if not rows: print(f"Sem noticias gravadas nas ultimas {a.hours}h (tier<={a.max_tier}). Noticias nao capturadas = sem sinal."); return
+    n = now_brt()
+    start, label = (n - timedelta(hours=a.hours), f"ultimas {a.hours} h") if a.hours else window_start(n)
+    rows = [r for r in con.execute("SELECT * FROM news WHERE COALESCE(tier,9)<=?", (a.max_tier,)).fetchall()
+            if parse_ts(r["published_at"]) >= start]
+    rows.sort(key=lambda r: parse_ts(r["published_at"]), reverse=True)
+    print(f"Janela: {label} (inicio {start:%Y-%m-%d %H:%M} BRT; agora {n:%Y-%m-%d %H:%M})")
+    if not rows:
+        print("Nenhuma noticia DENTRO da janela. Nao usar noticia mais antiga. Sem noticias capturadas = sem sinal."); return
     for r in rows:
-        print(f"{r['published_at']} T{r['tier']} [{r['category']}] {r['impact_nas']}/{r['confidence']}/{r['persistence']} {r['headline']} ({r['source']}; 2a fonte: {r['verified_by']})")
+        ts = parse_ts(r["published_at"]); age = (n - ts).total_seconds() / 3600
+        print(f"{ts:%Y-%m-%d %H:%M} BRT (ha {age:.1f} h) T{r['tier']} [{r['category']}] {r['impact_nas']}/{r['confidence']}/{r['persistence']} "
+              f"{r['headline']} ({r['source']}; 2a fonte: {r['verified_by']})")
 
 def find(con, a):
     r = con.execute("SELECT id FROM events WHERE date=? AND time_brt=? AND event=?", (a.date, a.time, a.event)).fetchone()
@@ -119,8 +157,9 @@ def main():
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init")
     u = sub.add_parser("upsert"); u.add_argument("file")
+    sub.add_parser("window")
     un = sub.add_parser("upsert-news"); un.add_argument("file")
-    nw = sub.add_parser("news"); nw.add_argument("--hours", type=int, default=48); nw.add_argument("--max-tier", type=int, default=2)
+    nw = sub.add_parser("news"); nw.add_argument("--hours", type=int, default=None); nw.add_argument("--max-tier", type=int, default=2)
     t = sub.add_parser("today"); t.add_argument("--date"); t.add_argument("--min-stars", type=int, default=2)
     for name in ("set-actual", "add-reaction"):
         s = sub.add_parser(name)
@@ -131,7 +170,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "upsert-news": cmd_upsert_news, "news": cmd_news,
+     "window": cmd_window, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 
 if __name__ == "__main__":
