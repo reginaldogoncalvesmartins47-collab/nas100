@@ -21,8 +21,11 @@ analise obrigatoria. **Sem analise do calendario feita no dia, nao ha sinal (fal
 ## Fonte principal: Investing.com (escolha da usuaria)
 - Calendario: https://br.investing.com/economic-calendar (fuso Brasilia, pais EUA, importancia 2 e 3 estrelas).
 - Capturar: hora, pais, evento, estrelas, atual, projecao, anterior e a previa do evento quando houver.
-- Acesso: ler a pagina aberta e logada no navegador do PC da usuaria (extensao do navegador). **Nao guardar senha em arquivo.**
-  Conferir os termos de uso do Investing antes de automatizar; sites assim costumam ter protecao contra robos (nao testado).
+- Acesso: **somente pela extensao do navegador** (Claude in Chrome), lendo a aba do Investing aberta e logada no PC da usuaria.
+  **Proibido scraper, script ou requisicao automatica** (o Investing nao aceita). Nao guardar senha em arquivo.
+- Rotina: captura diaria antes do horario de operacao (ex.: 05:30 BRT) e nova leitura quando sair cada evento relevante.
+  Exige PC ligado, Chrome aberto e a aba do Investing logada.
+- Nao testado: nao sei se a extensao le bem essa pagina nem se os termos do site permitem esse uso; conferir.
 - Fallback que funciona hoje: colar print ou texto do calendario na conversa.
 - Motivo: em 30/09/2026 uma busca na web trouxe dados errados (PIB projetado 5,0% vs 1,5% no Investing).
 

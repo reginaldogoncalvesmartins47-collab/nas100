@@ -93,8 +93,9 @@
       "url": "https://br.investing.com/economic-calendar",
       "filters": "pais EUA; importancia 2-3 estrelas (1 estrela so se ligada ao NAS); fuso Brasilia; incluir falas do Fed e resultados de gigantes de tecnologia",
       "capture": "hora, pais, evento, estrelas, atual, projecao, anterior, previa quando houver",
-      "access": "ler a pagina ja aberta/logada no navegador da usuaria; NAO guardar senha em arquivos; conferir termos de uso do site antes de automatizar",
-      "fallback": "usuaria cola print/texto do calendario (funciona hoje)"
+      "access": "SOMENTE pela extensao do navegador (Claude in Chrome), lendo a aba do Investing ja aberta e logada no PC da usuaria. PROIBIDO scraper/script/requisicao automatica (o Investing nao aceita). NAO guardar senha em arquivos.",
+      "fallback": "usuaria cola print/texto do calendario; se nem a extensao nem o fallback entregarem dados, nao ha sinal no dia (falha fechada)",
+      "schedule": "captura diaria antes do inicio do horario de operacao (ex.: 05:30 BRT) e nova leitura quando sair cada evento relevante; PC ligado, Chrome aberto, aba do Investing logada"
     }
   }
 }
