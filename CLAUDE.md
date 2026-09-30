@@ -21,7 +21,10 @@ Ajudar o usuario a operar o NAS100 (PEPPERSTONE:NAS100): ler o grafico no Tradin
 ## Antes de qualquer entrada (ordem)
 1. calendario do dia (Investing, pela extensao) -> 2. noticias na janela (dom/seg desde sexta 16h BRT; ter-sex 24h)
 -> 3. feriados globais, eventos fora do calendario e plano antecipado -> 4. leitura RACIOCINADA dos pares em H1/H4
--> 5. `python scripts/calendar_db.py gate` = LIBERADO -> so entao regiao com nota + reacao do mercado + RR + risco.
+-> 5. sentimento do mercado (2+ fontes) -> 6. `python scripts/calendar_db.py gate` = LIBERADO -> so entao regiao com nota + reacao do mercado + RR + risco.
+Se o gate estiver BLOQUEADO: a prioridade e concluir a lista de pendencias, na ordem (sem parar, sem pedir permissao
+para fazer o dever de casa; so perguntar o que apenas a usuaria sabe). Sem trava de horario. Noticias: so checagem
+incremental (`since`). Leitura de par sem mudanca: `renew-read`. Antes de evento importante: plano com direcao (compra/venda).
 Nunca perseguir a manchete. Nao usar noticia fora da janela. Nao aplicar correlacao mecanica.
 
 ## Arquivos

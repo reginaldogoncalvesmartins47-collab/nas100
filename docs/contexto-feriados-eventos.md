@@ -19,6 +19,11 @@ correlacionados com cada noticia.
    cenarios (acima/abaixo do esperado), ativos correlacionados a vigiar, regiao candidata e a nota.
 
 ## Regras de antecipacao
+- **Posicionamento obrigatorio antes do evento:** todo evento de 3 estrelas e todo evento fora do calendario exige um
+  plano com **direcao (compra ou venda)**, regiao/entrada e stop (`add-plan --stance compra|venda`). Continua sujeito
+  aos limites de risco (`docs/regras-risco.md`). O sistema so sinaliza; quem executa e a usuaria.
+  Atencao (registrada para a usuaria decidir): posicionar sempre, mesmo sem vantagem clara, aumenta o numero de trades
+  e o risco de slippage em evento; a conta de US$ 20 e o lote minimo limitam o tamanho do stop.
 - O plano e criado **antes** do evento. Plano criado depois e gravado como **TARDIO** e **nao gera entrada pela manchete**.
 - Plano tardio nao conta como plano: o item continua **SEM PLANO** no briefing.
 - Depois do evento: ler a reacao do preco e dos correlacionados para **gerir/ajustar** o plano, nao para perseguir a manchete.
@@ -30,7 +35,7 @@ Tudo vai para `data/calendario.db` (tabelas `holidays`, `extra_events`, `news`, 
 janela e planos ativos, com as pendencias **SEM PLANO** e **TARDIO**. Rodar no inicio do dia e a cada nova noticia.
 
 ## Comandos
-`upsert-holidays`, `upsert-extra`, `add-plan --theme T --correlated A,B --position TXT [--event-id|--extra-id|--event-time]`,
+`upsert-holidays`, `upsert-extra`, `add-plan --stance compra|venda --theme T --correlated A,B --position TXT [--event-id|--extra-id|--event-time]`,
 `close-plan --id N --status concluido|invalidado`, `themes`, `brief`.
 
 ## Limites

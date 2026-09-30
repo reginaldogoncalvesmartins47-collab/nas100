@@ -40,18 +40,23 @@ Antes de tratar uma queda intradia como ameaca ao viés, responder:
 Conclusao registrada: **correcao dentro do macro** (viés mantido) ou **mudanca de regime** (viés vencido, sem sinal
 ate a usuaria confirmar).
 
-## Trava no codigo (`python scripts/calendar_db.py gate`)
-Retorna **LIBERADO** ou **BLOQUEADO** com os motivos. Bloqueia se:
-- fora do horario de operacao (06:00-23:20 BRT, seg-sex);
+## Semaforo no codigo (`python scripts/calendar_db.py gate`)
+Devolve **LIBERADO** ou **BLOQUEADO**. Nao ha trava de horario: a usuaria liga/desliga o PC quando quiser.
+**Vermelho = lista de pendencias a concluir agora, na ordem, com o "como" de cada uma.** A prioridade do Claude e
+concluir a tarefa (nao parar, nao pedir permissao para fazer o dever de casa; so perguntar o que apenas a usuaria sabe).
+Pendencias que geram vermelho:
 - calendario do dia nao capturado; feriados e eventos fora do calendario nao verificados hoje;
-- noticias nao verificadas nos ultimos 60 min (`mark-checked --name news`, inclusive "nada relevante");
-- evento de 3 estrelas ou extra ainda por vir sem plano antecipado;
-- falta leitura de qualquer par obrigatorio em H1 ou H4, ou a leitura esta velha (H1 > 60 min, H4 > 240 min).
+- noticias do dia nunca verificadas (depois da 1a checagem so ha um AVISO para checar de forma **incremental**:
+  buscar apenas o publicado depois da ultima checagem, comando `since`; nao rever o que ja esta no banco);
+- sentimento do mercado com menos de 2 fontes hoje (`docs/sentimento.md`);
+- evento de 3 estrelas ou fora do calendario ainda por vir **sem plano com direcao (compra/venda)**;
+- falta leitura de par obrigatorio em H1 ou H4, ou ela passou da validade (H1 60 min, H4 240 min).
+  Se **nada mudou**, basta `renew-read` (sem reescrever a analise); se mudou, `add-read`.
 **LIBERADO nao e sinal.** Regiao com nota, reacao do mercado, RR e limites de risco ainda precisam passar.
 Ainda nao inclui a regra do gap/viés vencido.
 
 ## Comandos
-`add-read`, `reads`, `mark-checked`, `gate`, `brief` (ver `docs/contexto-feriados-eventos.md`).
+`add-read`, `renew-read`, `reads`, `mark-checked`, `since`, `add-sentiment`, `gate`, `brief` (ver `docs/contexto-feriados-eventos.md`).
 
 ## Limites
 - Quem raciocina e grava e o Claude; o codigo so exige estrutura, validade e a explicacao. Uma leitura mal feita

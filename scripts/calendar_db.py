@@ -9,13 +9,16 @@ Comandos:
   brief [--date D]                  briefing do dia: feriados, calendario, eventos extras, noticias, planos, pendencias
   upsert-holidays ARQ.json          feriados (pais, nome, fechado/cedo, fonte)
   upsert-extra ARQ.json             eventos fora do calendario (cupulas, discursos) - exige published_at com fuso
-  add-plan --theme T --correlated A,B --position TXT [--event-id N|--extra-id N|--event-time ISO]   plano de posicionamento ANTECIPADO
+  add-plan --stance compra|venda --theme T --correlated A,B --position TXT [--event-id N|--extra-id N|--event-time ISO]   plano de posicionamento ANTECIPADO
   close-plan --id N --status concluido|invalidado   encerra plano
   themes                            temas e ativos correlacionados (rules.json)
   add-read --pair P --tf H1|H4|D1 --trend T --why TXT --implication I --confidence C --invalidation TXT   leitura RACIOCINADA de um par (micro nao aceito)
   reads [--pair P]                  ultima leitura de cada par/tf, com idade
   mark-checked --name calendar|holidays|extra_events|news [--note]   registra que verificou (inclusive 'nada relevante')
-  gate                              trava: LIBERADO ou BLOQUEADO (com motivos) antes de analisar entrada
+  gate                              semaforo: LIBERADO ou BLOQUEADO com a LISTA de pendencias a concluir (sem trava de horario)
+  since                             ultima checagem de noticias: buscar so o que saiu depois (incremental)
+  add-sentiment --source S --metric M --reading risk_on|risk_off|neutro|misto [--value V --note N]   sentimento do mercado (Finviz e outras)
+  renew-read --pair P --tf TF --note TXT   renova leitura quando NADA mudou (sem reescrever)
   news [--hours N] [--max-tier 2]   lista noticias DENTRO da janela (padrao) por nivel de fonte
   today [--date AAAA-MM-DD] [--min-stars N]   lista eventos do dia
   set-actual --date D --time HH:MM --event NOME --actual VALOR   grava o realizado e calcula a surpresa
@@ -58,7 +61,11 @@ CREATE TABLE IF NOT EXISTS plans (
   id INTEGER PRIMARY KEY,
   date TEXT NOT NULL, theme TEXT NOT NULL, ref_table TEXT, ref_id INTEGER, correlated TEXT NOT NULL,
   scenario_up TEXT, scenario_down TEXT, position_note TEXT NOT NULL, event_time TEXT, lead_minutes INTEGER,
-  anticipated INTEGER, status TEXT DEFAULT 'ativo', created_at TEXT, updated_at TEXT, closed_note TEXT
+  anticipated INTEGER, status TEXT DEFAULT 'ativo', created_at TEXT, updated_at TEXT, closed_note TEXT, stance TEXT
+);
+CREATE TABLE IF NOT EXISTS sentiment_reads (
+  id INTEGER PRIMARY KEY, created_at TEXT NOT NULL, source TEXT NOT NULL, metric TEXT NOT NULL, value TEXT,
+  reading TEXT NOT NULL, note TEXT
 );
 CREATE TABLE IF NOT EXISTS pair_reads (
   id INTEGER PRIMARY KEY,
@@ -88,7 +95,10 @@ def surprise(actual, forecast):
 def connect(path):
     os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     con = sqlite3.connect(path); con.row_factory = sqlite3.Row
-    con.executescript(SCHEMA); return con
+    con.executescript(SCHEMA)
+    try: con.execute("ALTER TABLE plans ADD COLUMN stance TEXT")  # bancos criados antes da regra de posicionamento
+    except sqlite3.OperationalError: pass
+    return con
 
 def now(): return datetime.now().isoformat(timespec="seconds")
 
@@ -226,9 +236,9 @@ def cmd_add_plan(con, a):
         lead = int((ev_time - n).total_seconds() // 60); anticipated = 1 if lead > 0 else 0
         if not anticipated: print("AVISO: plano TARDIO (o evento ja ocorreu). Regra: nao operar perseguindo a noticia.")
     con.execute("""INSERT INTO plans(date,theme,ref_table,ref_id,correlated,scenario_up,scenario_down,position_note,event_time,
-                   lead_minutes,anticipated,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                   lead_minutes,anticipated,created_at,updated_at,stance) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                 (date, a.theme, ref[0], ref[1], a.correlated, a.up, a.down, a.position,
-                 ev_time.isoformat(timespec="minutes") if ev_time else None, lead, anticipated, now(), now()))
+                 ev_time.isoformat(timespec="minutes") if ev_time else None, lead, anticipated, now(), now(), a.stance))
     con.commit(); print("plano gravado, id", con.execute("SELECT last_insert_rowid()").fetchone()[0])
 
 def cmd_close_plan(con, a):
@@ -253,7 +263,7 @@ def cmd_brief(con, a):
               f"{', fecha cedo ' + h['early_close'] if h['early_close'] else ''}) fonte={h['source']}")
     if not hol: print("  nenhum gravado (se o levantamento de feriados nao foi feito, FAZER antes de operar)")
     print("\n[Calendario (2+ estrelas)]")
-    plan_ref = {(r["ref_table"], r["ref_id"]) for r in con.execute("SELECT ref_table,ref_id FROM plans WHERE status!='invalidado' AND COALESCE(anticipated,1)!=0")}
+    plan_ref = {(r["ref_table"], r["ref_id"]) for r in con.execute("SELECT ref_table,ref_id FROM plans WHERE status!='invalidado' AND COALESCE(anticipated,1)!=0 AND stance IS NOT NULL")}
     evs = con.execute("SELECT * FROM events WHERE date=? AND COALESCE(stars,0)>=2 AND relevant_nas=1 ORDER BY time_brt", (d,)).fetchall()
     for e in evs:
         flag = "  <-- SEM PLANO" if (e["stars"] or 0) >= 3 and ("events", e["id"]) not in plan_ref else ""
@@ -271,7 +281,7 @@ def cmd_brief(con, a):
     pl = con.execute("SELECT * FROM plans WHERE status='ativo' AND date=? ORDER BY event_time", (d,)).fetchall()
     for p in pl:
         warn = "  <-- TARDIO: nao operar pela noticia" if p["anticipated"] == 0 else ""
-        print(f"  [{p['id']}] {p['theme']} | correlacionados: {p['correlated']} | {p['position_note']}{warn}")
+        print(f"  [{p['id']}] {(p['stance'] or 'SEM DIRECAO').upper()} | {p['theme']} | correlacionados: {p['correlated']} | {p['position_note']}{warn}")
     if not pl: print("  nenhum plano ativo")
 
 def load_rules():
@@ -310,48 +320,77 @@ def cmd_mark_checked(con, a):
                 (n.strftime("%Y-%m-%d"), a.name, n.isoformat(timespec="seconds"), a.note))
     con.commit(); print("verificacao registrada:", a.name)
 
+def cmd_add_sentiment(con, a):
+    con.execute("INSERT INTO sentiment_reads(created_at,source,metric,value,reading,note) VALUES(?,?,?,?,?,?)",
+                (now_brt().isoformat(timespec="seconds"), a.source, a.metric, a.value, a.reading, a.note))
+    con.commit(); print("sentimento gravado")
+
+def cmd_renew_read(con, a):
+    r = con.execute("SELECT * FROM pair_reads WHERE pair=? AND tf=? ORDER BY created_at DESC", (a.pair, a.tf)).fetchone()
+    if not r: sys.exit("nao ha leitura anterior desse par/tf: use add-read")
+    n = now_brt()
+    con.execute("""INSERT INTO pair_reads(created_at,pair,tf,trend,structure,why,news_id,implication,divergence,confidence,invalidation)
+                   VALUES(?,?,?,?,?,?,?,?,?,?,?)""",
+                (n.isoformat(timespec="seconds"), r["pair"], r["tf"], r["trend"], r["structure"],
+                 f"{r['why']} [renovada {n:%H:%M}: {a.note}]", r["news_id"], r["implication"], r["divergence"],
+                 r["confidence"], r["invalidation"]))
+    con.commit(); print("leitura renovada (nada mudou):", a.pair, a.tf)
+
+def cmd_since(con, a):
+    n = now_brt(); start, label = window_start(n)
+    c = con.execute("SELECT checked_at FROM checks WHERE name='news' ORDER BY checked_at DESC").fetchone()
+    if c and parse_ts(c["checked_at"]) >= start:
+        print(f"Ultima checagem de noticias: {parse_ts(c['checked_at']):%Y-%m-%d %H:%M} BRT. Buscar SO o publicado depois disso; nao rever o que ja esta no banco.")
+    else:
+        print(f"Sem checagem de noticias dentro da janela ({label}). Buscar desde {start:%Y-%m-%d %H:%M} BRT.")
+
 def cmd_gate(con, a):
     n = now_brt(); d = n.strftime("%Y-%m-%d"); R = load_rules()
     cfg = R.get("gate_3_pairs", {}); fresh = cfg.get("fresh_minutes", {"H1": 60, "H4": 240})
-    news_fresh = R.get("gate_1_news", {}).get("checked_fresh_minutes", 60)
-    block, warn = [], []
-    # sessao
-    sess = R.get("session_brt", "06:00-23:20").split("-")
-    hhmm = n.strftime("%H:%M")
-    if n.weekday() >= 5 or not (sess[0] <= hhmm <= sess[1]): block.append(f"fora do horario de operacao ({sess[0]}-{sess[1]} BRT, seg-sex)")
+    min_src = R.get("gate_4_sentiment", {}).get("min_sources", 2)
+    news_warn = R.get("gate_1_news", {}).get("incremental_warn_minutes", 60)
+    todo, warn = [], []
     def checked_today(name): return con.execute("SELECT checked_at FROM checks WHERE date=? AND name=? ORDER BY checked_at DESC", (d, name)).fetchone()
-    # calendario
     nev = con.execute("SELECT COUNT(*) c FROM events WHERE date=? AND COALESCE(stars,0)>=2", (d,)).fetchone()["c"]
-    if not nev and not checked_today("calendar"): block.append("calendario de hoje nao capturado (gate 0)")
-    # feriados / eventos extras / noticias
-    if not checked_today("holidays"): block.append("feriados globais nao verificados hoje (gate 2): rode mark-checked --name holidays")
-    if not checked_today("extra_events"): block.append("eventos fora do calendario nao verificados hoje (gate 2)")
+    if not nev and not checked_today("calendar"):
+        todo.append(("calendario de hoje nao capturado (gate 0)", "ler o Investing pela extensao -> upsert ARQ.json (ou mark-checked --name calendar se nao houver evento relevante)"))
+    if not checked_today("holidays"):
+        todo.append(("feriados globais nao verificados hoje (gate 2)", "levantar feriados (hoje e 2 dias) -> upsert-holidays; depois mark-checked --name holidays"))
+    if not checked_today("extra_events"):
+        todo.append(("eventos fora do calendario nao verificados hoje (gate 2)", "buscar cupulas/reunioes/discursos -> upsert-extra; depois mark-checked --name extra_events"))
     c = checked_today("news")
-    if not c or (n - parse_ts(c["checked_at"])).total_seconds() / 60 > news_fresh:
-        block.append(f"noticias nao verificadas nos ultimos {news_fresh} min (gate 1): rode mark-checked --name news")
-    # planos
-    plan_ref = {(r["ref_table"], r["ref_id"]) for r in con.execute("SELECT ref_table,ref_id FROM plans WHERE status!='invalidado' AND COALESCE(anticipated,1)!=0")}
+    if not c:
+        todo.append(("noticias de hoje ainda nao verificadas (gate 1)", "buscar a janela inteira (rode `since`) -> upsert-news; depois mark-checked --name news"))
+    else:
+        age = (n - parse_ts(c["checked_at"])).total_seconds() / 60
+        if age > news_warn: warn.append(f"ultima checagem de noticias ha {int(age)} min: fazer checagem INCREMENTAL (rode `since`); nao rever o que ja esta no banco")
+    srcs = con.execute("SELECT COUNT(DISTINCT source) c FROM sentiment_reads WHERE created_at LIKE ?", (d + "%",)).fetchone()["c"]
+    if srcs < min_src:
+        todo.append((f"sentimento do mercado: {srcs} fonte(s) hoje, minimo {min_src} (gate 4)", "ler Finviz e outras fontes (ver docs/sentimento.md) -> add-sentiment --source S --metric M --reading risk_on|risk_off|neutro|misto"))
+    plan_ref = {(r["ref_table"], r["ref_id"]) for r in con.execute("SELECT ref_table,ref_id FROM plans WHERE status!='invalidado' AND COALESCE(anticipated,1)!=0 AND stance IS NOT NULL")}
     for e in con.execute("SELECT * FROM events WHERE date=? AND COALESCE(stars,0)>=3", (d,)):
         if ("events", e["id"]) not in plan_ref:
             t = row_time(e["date"], e["time_brt"])
-            (block if t and t > n else warn).append(f"evento 3 estrelas sem plano antecipado: {e['event']}" + ("" if t and t > n else " (ja ocorreu: nao da para antecipar)"))
+            if t and t > n: todo.append((f"posicionamento antes do evento: falta plano com DIRECAO (compra/venda) para {e['event']} ({e['time_brt']} BRT)", f"add-plan --event-id {e['id']} --stance compra|venda --theme T --correlated A,B --position TXT"))
+            else: warn.append(f"evento 3 estrelas sem plano antecipado: {e['event']} (ja ocorreu: nao da para antecipar)")
     for e in con.execute("SELECT * FROM extra_events WHERE date=? AND status!='cancelado'", (d,)):
         if ("extra_events", e["id"]) not in plan_ref:
             t = row_time(e["date"], e["time_brt"])
-            (block if not t or t > n else warn).append(f"evento fora do calendario sem plano antecipado: {e['title']}")
-    # pares
+            if not t or t > n: todo.append((f"posicionamento antes do evento: falta plano com DIRECAO para {e['title']}", f"add-plan --extra-id {e['id']} --stance compra|venda --theme T --correlated A,B --position TXT"))
+            else: warn.append(f"evento fora do calendario sem plano antecipado: {e['title']} (ja ocorreu)")
     for pair in cfg.get("required", ["VIX", "Brent", "US10Y", "ES", "DXY"]):
         for tf in cfg.get("timeframes_required", ["H1", "H4"]):
             r = con.execute("SELECT * FROM pair_reads WHERE pair=? AND tf=? ORDER BY created_at DESC", (pair, tf)).fetchone()
-            if not r: block.append(f"sem leitura de {pair} em {tf} (gate 3)"); continue
+            if not r: todo.append((f"sem leitura de {pair} em {tf} (gate 3)", f"add-read --pair {pair} --tf {tf} ... (raciocinar: por que, implicacao, invalidacao)")); continue
             age = (n - parse_ts(r["created_at"])).total_seconds() / 60
-            if age > fresh.get(tf, 60): block.append(f"leitura de {pair} {tf} velha ({int(age)} min > {fresh.get(tf, 60)})")
-    print(f"=== GATE {d} {hhmm} BRT ===")
-    if block:
-        print("BLOQUEADO:"); [print("  -", b) for b in block]
+            if age > fresh.get(tf, 60): todo.append((f"leitura de {pair} {tf} com {int(age)} min (validade {fresh.get(tf, 60)})", f"ver se algo MUDOU: se nao, renew-read --pair {pair} --tf {tf} --note TXT; se sim, add-read"))
+    print(f"=== GATE {d} {n:%H:%M} BRT ===")
+    if todo:
+        print("BLOQUEADO. PRIORIDADE: concluir as pendencias abaixo, na ordem. Nao parar e nao pedir permissao para fazer o dever de casa;\nso perguntar a usuaria o que apenas ela sabe.")
+        for i, (m, h) in enumerate(todo, 1): print(f" {i}. {m}\n    como: {h}")
     else: print("LIBERADO para analisar entrada (nao e sinal: regiao, reacao e risco ainda precisam passar).")
     for w in warn: print("  aviso:", w)
-    sys.exit(1 if block else 0)
+    sys.exit(1 if todo else 0)
 
 def find(con, a):
     r = con.execute("SELECT id FROM events WHERE date=? AND time_brt=? AND event=?", (a.date, a.time, a.event)).fetchone()
@@ -376,7 +415,10 @@ def main():
     sub.add_parser("init")
     u = sub.add_parser("upsert"); u.add_argument("file")
     sub.add_parser("window")
-    sub.add_parser("themes"); sub.add_parser("gate")
+    sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")
+    sm = sub.add_parser("add-sentiment"); sm.add_argument("--source", required=True); sm.add_argument("--metric", required=True)
+    sm.add_argument("--value"); sm.add_argument("--reading", choices=["risk_on", "risk_off", "neutro", "misto"], required=True); sm.add_argument("--note")
+    rr = sub.add_parser("renew-read"); rr.add_argument("--pair", required=True); rr.add_argument("--tf", required=True); rr.add_argument("--note", required=True)
     ar = sub.add_parser("add-read")
     ar.add_argument("--pair", required=True); ar.add_argument("--tf", required=True)
     ar.add_argument("--trend", choices=["alta", "baixa", "lateral"], required=True); ar.add_argument("--structure")
@@ -392,6 +434,7 @@ def main():
     ap = sub.add_parser("add-plan")
     ap.add_argument("--date"); ap.add_argument("--theme", required=True); ap.add_argument("--correlated", required=True)
     ap.add_argument("--up"); ap.add_argument("--down"); ap.add_argument("--position", required=True)
+    ap.add_argument("--stance", choices=["compra", "venda"], required=True)
     ap.add_argument("--event-id", type=int); ap.add_argument("--extra-id", type=int); ap.add_argument("--event-time")
     cp = sub.add_parser("close-plan"); cp.add_argument("--id", type=int, required=True)
     cp.add_argument("--status", choices=["concluido", "invalidado"], required=True); cp.add_argument("--note")
@@ -407,7 +450,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "gate": cmd_gate, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 

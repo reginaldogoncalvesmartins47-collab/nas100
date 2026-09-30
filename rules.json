@@ -63,13 +63,15 @@
       "gate_1_news: noticias/gap analisados e vies nao vencido",
       "gate_2_context: feriados, eventos extras e plano antecipado com correlacionados feitos; nenhum item SEM PLANO",
       "gate_3_pairs: leitura raciocinada de VIX, Brent, US10Y, ES e DXY em H1 e H4, dentro da validade; `calendar_db.py gate` = LIBERADO",
+      "gate_4_sentiment: sentimento do mercado em 2+ fontes hoje",
       "region_score >= minimo (com ou contra a macro)",
       "reacao do mercado na regiao (varredura valida + fechamento de volta, ou confirmacao definida pelo usuario)",
       "RR ate a proxima liquidez oposta >= 2",
       "dentro do horario de operacao",
       "limites de risco ok (docs/regras-risco.md)"
     ],
-    "against_macro": "nota maior, risco menor, saida curta (ex.: meio do range)"
+    "against_macro": "nota maior, risco menor, saida curta (ex.: meio do range)",
+    "_gate_behavior": "BLOQUEADO = lista de pendencias a concluir agora (prioridade do Claude). Sem trava de horario: a usuaria liga/desliga o PC."
   },
   "risk_ref": "docs/regras-risco.md",
   "mode": "signal_only",
@@ -133,7 +135,8 @@
       "empty_window": "se nao houver noticia dentro da janela, dizer isso; NUNCA recorrer a noticia mais antiga para explicar o movimento",
       "holidays": "feriado dos EUA na segunda: janela a revisar (nao tratado)"
     },
-    "checked_fresh_minutes": 60
+    "incremental_warn_minutes": 60,
+    "incremental": "nao rever noticias ja gravadas; apos a 1a checagem do dia, buscar so o publicado depois da ultima checagem (comando since)"
   },
   "theme_correlations": {
     "_nota": "HIPOTESES a calibrar. Ativos a observar junto do NAS100 quando o tema aparece.",
@@ -197,7 +200,8 @@
     "no_chasing": "O Claude nunca espera a noticia sair para entrar. Planos sao criados ANTES do evento (anticipated=1). Plano criado depois do evento e marcado TARDIO e nao gera entrada por manchete.",
     "after_event": "depois do evento a leitura da reacao serve para gerir/ajustar o plano e ler correlacionados, nao para perseguir a manchete",
     "memory": "tudo gravado em data/calendario.db (holidays, extra_events, news, plans); comando `brief` mostra pendencias (SEM PLANO, TARDIO) para nada se perder durante o dia",
-    "extra_event_rules": "published_at com fuso obrigatorio; 2 fontes nivel 1-2 para confirmar; status: anunciado/confirmado/ocorrido/cancelado"
+    "extra_event_rules": "published_at com fuso obrigatorio; 2 fontes nivel 1-2 para confirmar; status: anunciado/confirmado/ocorrido/cancelado",
+    "positioning": "OBRIGATORIO estar posicionado (compra ou venda) ANTES do evento: todo plano de evento de 3 estrelas ou fora do calendario exige --stance compra|venda, regiao/entrada e stop; sujeito aos limites de risco (docs/regras-risco.md). O sistema so sinaliza; quem executa e a usuaria."
   },
   "gate_3_pairs": {
     "rule": "Antes de qualquer entrada, dentro do horario de operacao, o Claude RACIOCINA sobre os pares do NAS100 em H1 e H4. NAO e correlacao simples nem regra mecanica (ex.: 'petroleo caiu => compra'). Cada leitura exige: tendencia, POR QUE (causa/noticia), implicacao para o NAS, confianca e o que INVALIDA.",
@@ -226,6 +230,20 @@
     },
     "conflict_rule": "implicacao 'conflito' exige explicacao da divergencia (campo divergence)",
     "store": "tabela pair_reads; comandos add-read / reads",
-    "enforced_by": "scripts/calendar_db.py gate"
+    "enforced_by": "scripts/calendar_db.py gate (semaforo com lista de pendencias; renew-read quando nada mudou)"
+  },
+  "gate_4_sentiment": {
+    "rule": "Antes de qualquer entrada, registrar o sentimento do mercado em pelo menos 2 fontes no dia.",
+    "min_sources": 2,
+    "doc": "docs/sentimento.md",
+    "candidate_sources": [
+      "Finviz (mapa de calor por setor, futuros, noticias)",
+      "CNN Fear & Greed",
+      "CBOE put/call",
+      "AAII (semanal)",
+      "CFTC COT (semanal, sexta)",
+      "VIX (ja coberto em gate_3_pairs)"
+    ],
+    "access": "como o Investing: so por leitura da pagina no navegador (extensao), sem scraper; conferir termos de cada site"
   }
 }
