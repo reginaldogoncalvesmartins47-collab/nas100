@@ -45,10 +45,14 @@ sess     = input.session("0600-2320:23456", "Horario", group=gS)
 closeEOD = input.bool(true, "Fechar posicao ao fim do horario", group=gS)
 
 // ---------------- Niveis ----------------
-pdh = usePD ? request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on) : na
-pdl = usePD ? request.security(syminfo.tickerid, "D", low[1],  lookahead=barmerge.lookahead_on) : na
-pwh = usePW ? request.security(syminfo.tickerid, "W", high[1], lookahead=barmerge.lookahead_on) : na
-pwl = usePW ? request.security(syminfo.tickerid, "W", low[1],  lookahead=barmerge.lookahead_on) : na
+pdhRaw = request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on)
+pdlRaw = request.security(syminfo.tickerid, "D", low[1],  lookahead=barmerge.lookahead_on)
+pwhRaw = request.security(syminfo.tickerid, "W", high[1], lookahead=barmerge.lookahead_on)
+pwlRaw = request.security(syminfo.tickerid, "W", low[1],  lookahead=barmerge.lookahead_on)
+pdh = usePD ? pdhRaw : na
+pdl = usePD ? pdlRaw : na
+pwh = usePW ? pwhRaw : na
+pwl = usePW ? pwlRaw : na
 
 f_sess(s) =>
     inS = not na(time(timeframe.period, s, "America/Sao_Paulo"))
