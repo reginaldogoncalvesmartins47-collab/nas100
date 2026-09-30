@@ -9,6 +9,7 @@
 - [ ] Definir com o usuario o fim da lateralizacao e a volta da macro (caso 01)
 - [x] Decisao v1: liquidez + Fibo; SMC como fator opcional futuro (rules.json, docs/fluxo-analise.md)
 - [x] Regra 1: analise do calendario economico antes de qualquer entrada (docs/analise-calendario.md)
+- [x] Banco local do calendario (SQLite) com estrelas, surpresa e reacao do NAS (scripts/calendar_db.py)
 - [ ] Calibrar pontos/tolerancias com a base M15 do NAS100 (usuario precisa fornecer o CSV)
 - [ ] Compilar e rodar v2 no Pine Editor (M15, modo teste, capital 1000, limites altos)
 - [ ] Ler backtest e lista de negociacoes; ajustar niveis/gatilho

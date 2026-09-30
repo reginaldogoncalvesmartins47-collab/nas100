@@ -28,6 +28,17 @@ analise obrigatoria. **Sem analise do calendario feita no dia, nao ha sinal (fal
 - Fallback que funciona hoje: colar print ou texto do calendario na conversa.
 - Motivo: em 30/09/2026 uma busca na web trouxe dados errados (PIB projetado 5,0% vs 1,5% no Investing).
 
+## Armazenamento (para nao consultar o site toda hora)
+- Banco local SQLite em `data/calendario.db` (nao vai para o git). Script: `scripts/calendar_db.py`.
+- Tabela `events`: data, hora BRT, pais, evento, estrelas, categoria, atual, projecao, anterior, previa,
+  surpresa (atual - projecao), relevante_nas, notas, fonte, capturado_em/atualizado_em.
+- Tabela `reactions`: preco do NAS antes e 5/15/60 min depois do evento. Com o tempo vira a base para calibrar
+  a leitura da surpresa com dados reais.
+- Comandos: `init`, `upsert arquivo.json`, `today [--date] [--min-stars]`, `set-actual`, `add-reaction`.
+- Regra: consultar o banco primeiro; voltar ao Investing (pela extensao) so para capturar o dia, atualizar
+  realizados e eventos novos. Dia sem eventos no banco = nao capturado = sem sinal.
+- Exemplo de dados: `data/examples/calendario-2026-09-30.json` (transcrito de print; conferir).
+
 ## Leitura da surpresa (hipotese, o preco manda)
 - Inflacao/juros abaixo do consenso = leitura dovish (tende a favorecer o NAS); acima = hawkish (pressiona).
 - Crescimento/emprego acima do consenso = ambiguo (bom para lucros, ruim se empurrar juros): depende do regime.

@@ -1,0 +1,7 @@
+[
+ {"date":"2026-09-30","time_brt":"09:30","country":"US","event":"PIB dos EUA (Trimestral) (Q2)","stars":3,"category":"crescimento","actual":"2,2%","forecast":"1,5%","previous":"2,1%","source":"print do Investing (transcrito)"},
+ {"date":"2026-09-30","time_brt":"09:30","country":"US","event":"Indice de Precos PCE (Anual) (Ago)","stars":2,"category":"inflacao","actual":"3,4%","forecast":"3,7%","previous":"3,4%","source":"print do Investing (transcrito)"},
+ {"date":"2026-09-30","time_brt":"09:30","country":"US","event":"Indice de Precos PCE (Mensal) (Ago)","stars":2,"category":"inflacao","actual":"0,3%","forecast":"0,4%","previous":"0,1%","source":"print do Investing (transcrito)"},
+ {"date":"2026-09-30","time_brt":"09:30","country":"US","event":"Nucleo de Precos PCE (Q2)","stars":2,"category":"inflacao","actual":"3,30%","forecast":"3,60%","previous":"4,40%","source":"print do Investing (transcrito)"},
+ {"date":"2026-09-30","time_brt":"10:45","country":"US","event":"PMI de Chicago (Set)","stars":2,"category":"crescimento","actual":"58,8","forecast":"51,2","previous":"47,1","source":"print do Investing (transcrito)"}
+]

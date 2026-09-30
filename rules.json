@@ -96,6 +96,13 @@
       "access": "SOMENTE pela extensao do navegador (Claude in Chrome), lendo a aba do Investing aberta no PC da usuaria (calendario publico: login NAO necessario). PROIBIDO scraper/script/requisicao automatica (o Investing nao aceita).",
       "fallback": "usuaria cola print/texto do calendario; se nem a extensao nem o fallback entregarem dados, nao ha sinal no dia (falha fechada)",
       "schedule": "captura diaria antes do inicio do horario de operacao (ex.: 05:30 BRT) e nova leitura quando sair cada evento relevante; PC ligado, Chrome aberto, aba do calendario do Investing aberta"
+    },
+    "store": {
+      "type": "SQLite local (data/calendario.db, nao vai para o git)",
+      "script": "scripts/calendar_db.py",
+      "rule": "consultar o banco primeiro; voltar ao Investing (pela extensao) so para capturar o dia, atualizar realizados e eventos novos. Dia sem eventos no banco = calendario nao capturado = sem sinal.",
+      "fields": "data, hora BRT, pais, evento, estrelas, categoria, atual, projecao, anterior, previa, surpresa, relevante_nas, notas, fonte, capturado_em",
+      "reactions": "tabela reactions guarda o preco do NAS antes e 5/15/60 min depois do evento, para calibrar a leitura da surpresa com dados reais"
     }
   }
 }
