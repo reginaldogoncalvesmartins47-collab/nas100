@@ -34,7 +34,8 @@ Nunca perseguir a manchete. Nao usar noticia fora da janela. Nao aplicar correla
 - Stop e alvo ficam como ordens no broker; o Claude ajusta nas checagens, nunca substitui o stop.
 
 ## Estilo da usuaria
-Ela le rejeicao de pavio. O Claude entende pelos valores de open/high/low/close das velas (nao precisa enxergar o grafico).
+Ela opera e le rejeicao de pavio em M5. O Claude entende pelos valores de open/high/low/close das velas M5 (nao precisa enxergar o grafico).
+Tempos: macro/vies H1 e H4; regioes Fibo H1 (+ refino M15); execucao e saida M5.
 Usar `path --o --h --l --c` e `wick`. Saida: alvo = regiao de oferta/demanda; acompanhar o caminho (`path`).
 
 ## Arquivos

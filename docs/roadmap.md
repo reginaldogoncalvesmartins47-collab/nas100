@@ -17,6 +17,8 @@
 - [x] Ajustes da usuaria: sem trava de horario, gate = lista de pendencias, noticia incremental, posicionamento obrigatorio, sentimento (docs/sentimento.md)
 - [x] Regra de ganho/saida + modo treino sem travas + tabela trades com MFE e stats (docs/gestao-saida.md)
 - [x] Alvo = regiao de oferta/demanda + leitura do caminho (path) + alerta de protecao
+- [x] Tempo grafico de execucao e saida: M5 (macro H1/H4, regioes H1 + refino M15)
+- [ ] Calibrar o criterio de pavio em M5 com exemplos OHLC da usuaria
 - [ ] Escolher e testar variantes de saida A/B/C/D na demo
 - [ ] Regra do gap e do vies vencido (ainda nao no gate)
 - [ ] Confirmar com a usuaria os niveis de fonte (docs/analise-noticias.md)

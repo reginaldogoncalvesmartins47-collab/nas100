@@ -272,7 +272,6 @@
       "trail": "abaixo do ultimo fundo (compra) / acima do ultimo topo (venda) em M15/H1, ou ATR"
     },
     "exit_on_invalidation": "vies vencido, nivel de invalidacao do plano perdido, par correlacionado virando contra com confirmacao",
-    "time_stop_bars_m15": 8,
     "log": "tabela trades (MFE/MAE, quanto devolveu, motivo de saida)",
     "target": {
       "rule": "alvo = proxima regiao de OFERTA (compra) ou DEMANDA (venda), vinda do mapa de regioes (SMC, PDH/PWH, EQH/EQL, Fibo); gravar a zona com --zone-low/--zone-high",
@@ -284,8 +283,22 @@
       "each_check": "qualidade do caminho (forte/fraca/lateral/revertendo), pares confirmam (sim/parcial/nao), distancia ate a borda da regiao",
       "alert_hypothesis": "rejeicao de pavio contra o trade (principalmente na regiao-alvo) => considerar realizar/proteger; caminho fraca/revertendo + pares sem confirmar + trade em +1R => considerar proteger",
       "primary_signal": "rejeicao de pavio, calculada das velas (open/high/low/close); nao precisa de imagem",
-      "how_to_read": "ler OHLC do ultimo candle FECHADO (M15/H1) via MCP e passar a `path --o --h --l --c`; o codigo detecta o pavio e se foi na regiao-alvo; calibrar o criterio com exemplos OHLC marcados pela usuaria"
-    }
+      "how_to_read": "ler OHLC do ultimo candle M5 FECHADO via MCP e passar a `path --o --h --l --c`; o codigo detecta o pavio e se foi na regiao-alvo; calibrar o criterio (palpite: pavio >= 50% da amplitude e >= 2x o corpo) com exemplos OHLC de M5 marcados pela usuaria",
+      "candle_tf": "M5",
+      "check_after_each_close_min": 5,
+      "m5_note": "M5 e mais ruidoso: o criterio pode precisar ser relativo ao ATR de M5; calibrar"
+    },
+    "time_stop_bars_m5": 24,
+    "time_stop_note": "hipotese: 24 candles de M5 (2 h) sem progresso => sair/reduzir; equivalente ao valor anterior de 8 candles de M15; testar"
   },
-  "operation_style": "a usuaria le rejeicao de pavio; o Claude entende pelos valores de open/close/high/low das velas (nao e preciso enxergar o grafico)"
+  "operation_style": "a usuaria opera e le rejeicao de pavio em M5; o Claude entende pelos valores de open/close/high/low das velas M5",
+  "timeframes": {
+    "macro_bias": [
+      "H1",
+      "H4"
+    ],
+    "regions": "Fibo H1 define regioes; Fibo M15 refina dentro de regiao H1 valida",
+    "execution_and_exit": "M5 (entrada e leitura de pavio para sair)",
+    "rule": "M1-M30 nunca como base do macro; M5 so para execucao e saida"
+  }
 }

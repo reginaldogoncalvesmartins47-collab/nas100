@@ -3,6 +3,9 @@
 Objetivo da usuaria: o bot deve **fazer entradas** (nao ser travado) e ser **otimizado na demo** ate a conta real.
 Problema real: a entrada foi boa, o trade andou a favor, **voltou tudo e nao fechou a tempo**.
 
+## Tempos graficos
+Macro/vies: H1 e H4. Regioes: Fibo H1 (+ refino M15). **Execucao e saida (pavio): M5.** M1-M30 nunca como base do macro.
+
 ## 1. Como nao travar o bot
 Separar duas coisas que estavam misturadas:
 - **Dever de casa (gate):** calendario, noticias, pares, sentimento. No **modo treino** isso **nao bloqueia** a entrada:
@@ -28,7 +31,7 @@ Separar duas coisas que estavam misturadas:
    depois, seguir o preco com stop atras do ultimo fundo (compra) / topo (venda) em M15/H1 ou por ATR.
 4. **Saida por invalidacao:** vies vencido (noticia/gap), perda do nivel de invalidacao do plano, par correlacionado
    virando contra com confirmacao. Sai mesmo sem tocar no stop.
-5. **Saida por tempo:** sem progresso em N candles (H: 8 de M15), sai ou reduz.
+5. **Saida por tempo:** sem progresso em N candles (H: 24 de M5, 2 horas), sai ou reduz.
 6. **Evento:** se o trade nao foi montado para o evento, reduzir/proteger antes do horario; se foi (posicionamento
    obrigatorio), o stop e o tamanho ja refletem o risco de slippage.
 Atencao: break-even cedo demais tira trades bons no ruido; parcial reduz o ganho dos grandes movimentos. Por isso testar.
@@ -51,7 +54,7 @@ Ela acompanha **como esta a movimentacao ate la**.
 ### Sinal principal: rejeicao de pavio (calculada das velas)
 A usuaria le **rejeicao de pavio**. Para o Claude, **nao precisa enxergar o grafico**: o pavio sai dos valores de
 open, high, low e close.
-- A cada checagem, ler o **ultimo candle fechado** (M15 ou H1, a definir) e rodar:
+- A cada checagem (logo apos o fechamento de cada candle de **M5**, tempo gráfico da usuaria), ler o **ultimo candle M5 fechado** e rodar:
   `path --id N --price P --quality ... --pairs ... --o O --h H --l L --c C`. O codigo calcula os pavios, detecta a rejeicao
   (criterio-hipotese: pavio >= 50% da amplitude e >= 2x o corpo) e diz se foi **na regiao-alvo** ou no caminho.
 - Pavio **contra** o trade, principalmente **na regiao-alvo**, gera alerta para considerar realizar/proteger.
@@ -59,6 +62,7 @@ open, high, low e close.
 - **Calibracao:** a usuaria passa exemplos em numeros (OHLC) de rejeicoes que ela considera boas e de outras que nao
   considera, com uma frase de por que. Com eles ajustamos o criterio (50%/2x) ate bater com o dela. Sem isso o criterio
   e palpite.
+- **M5 e mais ruidoso** que M15/H1: o criterio pode precisar ser relativo ao ATR de M5. Calibrar com exemplos de M5.
 - Limite: os numeros nao mostram contexto que o olho pega de relance (por exemplo, a estrutura em volta). Por isso o
   alerta e um aviso e o criterio e calibrado com os exemplos dela.
 
