@@ -93,11 +93,11 @@ def parse_ts(s):
     return dt.astimezone(BRT)
 
 def window_start(n):
-    """Dom/Seg (e sab): desde sexta 00:00 BRT. Ter-Sex: ultimas 24 h."""
+    """Dom/Seg (e sab): desde sexta 16:00 BRT. Ter-Sex: ultimas 24 h."""
     wd = n.weekday()  # seg=0 ... dom=6
     if wd in (5, 6, 0):
         back = {0: 3, 6: 2, 5: 1}[wd]
-        return (n - timedelta(days=back)).replace(hour=0, minute=0, second=0, microsecond=0), "desde sexta-feira 00:00 BRT"
+        return (n - timedelta(days=back)).replace(hour=16, minute=0, second=0, microsecond=0), "desde sexta-feira 16:00 BRT"
     return n - timedelta(hours=24), "ultimas 24 horas"
 
 def cmd_window(con, a):

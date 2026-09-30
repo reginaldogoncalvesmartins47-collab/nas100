@@ -11,7 +11,7 @@ Quem opera com o vies de sexta leva loss. Regra: **noticia nova invalida o vies 
 | **3** | Agregadores, blogs, sites de SEO/automaticos (ex.: tradingkey, biggo, finwire, stocksdownunder, rollingout) | So como pista. Nunca como base |
 
 ## Janela de informacao (regra central)
-- **Domingo, segunda (e sabado):** puxar tudo **desde a sexta-feira 00:00 (Brasilia)** ate agora.
+- **Domingo, segunda (e sabado):** puxar tudo **desde a sexta-feira 16:00 (horario de Brasilia, sempre)** ate agora.
 - **Terca a sexta:** puxar sempre as **ultimas 24 horas**.
 - **Data e hora com fuso sao obrigatorias.** Sem isso a noticia e rejeitada; tudo e convertido para Brasilia.
 - Noticia **fora da janela nao explica o movimento de agora**. Se perguntarem "por que o NAS100 esta subindo/caindo?",
