@@ -14,6 +14,9 @@ esSym    = input.symbol("CME_MINI:ES1!", "ES (S&P futuro)", group=gM)
 macroLen = input.int(12, "Janela de variacao (barras)", minval=2, group=gM)
 macroThr = input.float(0.0, "Variacao minima (%) para contar ponto", minval=0.0, step=0.01, group=gM)
 minScore = input.int(2, "Score macro minimo (de 3)", minval=1, maxval=3, group=gM)
+useCorr  = input.bool(true, "Filtro de correlacao movel (ponto so se a correlacao recente confirma)", group=gM)
+corrLen  = input.int(50, "Janela da correlacao (barras)", minval=10, group=gM)
+corrThr  = input.float(0.15, "Correlacao minima (modulo)", minval=0.0, maxval=1.0, step=0.05, group=gM)
 
 gL = "Liquidez / Volume"
 pivL    = input.int(10, "Pivot esquerda", minval=2, group=gL)
@@ -43,9 +46,22 @@ brentRoc = request.security(brentSym, timeframe.period, f_roc(), lookahead=barme
 yieldRoc = request.security(yieldSym, timeframe.period, f_roc(), lookahead=barmerge.lookahead_off)
 esRoc    = request.security(esSym,    timeframe.period, f_roc(), lookahead=barmerge.lookahead_off)
 
+// Correlacao movel (retornos de 1 barra) do NAS com cada ativo: so conta ponto se a
+// correlacao recente tem o sinal esperado (Brent/juros inversa, ES direta).
+nasRet   = ta.roc(close, 1)
+brentRet = request.security(brentSym, timeframe.period, ta.roc(close, 1), lookahead=barmerge.lookahead_off)
+yieldRet = request.security(yieldSym, timeframe.period, ta.roc(close, 1), lookahead=barmerge.lookahead_off)
+esRet    = request.security(esSym,    timeframe.period, ta.roc(close, 1), lookahead=barmerge.lookahead_off)
+corrBrent = ta.correlation(nasRet, brentRet, corrLen)
+corrYield = ta.correlation(nasRet, yieldRet, corrLen)
+corrEs    = ta.correlation(nasRet, esRet,    corrLen)
+brentOK = not useCorr or corrBrent < -corrThr
+yieldOK = not useCorr or corrYield < -corrThr
+esOK    = not useCorr or corrEs    >  corrThr
+
 // Brent caindo e juros caindo favorecem NAS; ES na mesma direcao confirma.
-bullScore = (brentRoc < -macroThr ? 1 : 0) + (yieldRoc < -macroThr ? 1 : 0) + (esRoc > macroThr ? 1 : 0)
-bearScore = (brentRoc >  macroThr ? 1 : 0) + (yieldRoc >  macroThr ? 1 : 0) + (esRoc < -macroThr ? 1 : 0)
+bullScore = (brentOK and brentRoc < -macroThr ? 1 : 0) + (yieldOK and yieldRoc < -macroThr ? 1 : 0) + (esOK and esRoc > macroThr ? 1 : 0)
+bearScore = (brentOK and brentRoc >  macroThr ? 1 : 0) + (yieldOK and yieldRoc >  macroThr ? 1 : 0) + (esOK and esRoc < -macroThr ? 1 : 0)
 
 // ---------------- Liquidez ----------------
 var float lastSwingLow  = na
