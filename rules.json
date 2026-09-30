@@ -60,6 +60,7 @@
   "entry_gate": {
     "all_required": [
       "gate_0_calendar: calendario do dia analisado",
+      "gate_1_news: noticias/gap analisados e vies nao vencido",
       "region_score >= minimo (com ou contra a macro)",
       "reacao do mercado na regiao (varredura valida + fechamento de volta, ou confirmacao definida pelo usuario)",
       "RR ate a proxima liquidez oposta >= 2",
@@ -104,5 +105,22 @@
       "fields": "data, hora BRT, pais, evento, estrelas, categoria, atual, projecao, anterior, previa, surpresa, relevante_nas, notas, fonte, capturado_em",
       "reactions": "tabela reactions guarda o preco do NAS antes e 5/15/60 min depois do evento, para calibrar a leitura da surpresa com dados reais"
     }
+  },
+  "gate_1_news": {
+    "rule": "Antes de qualquer entrada: analisar noticias desde o ultimo fechamento/fim de semana. Noticia de alto impacto ou gap >= 1 x ATR(H1) apos o vies ser definido => vies STALE => sem sinal ate a usuaria confirmar.",
+    "doc": "docs/analise-noticias.md",
+    "store": "tabela news em data/calendario.db (scripts/calendar_db.py upsert-news / news)",
+    "source_tiers": {
+      "1": "oficial e agencias (Reuters/AP/Bloomberg), WSJ/FT, comunicados de empresas, Fed, BLS/BEA, EIA/OPEC, CME",
+      "2": "Investing.com noticias (so por extensao), CNBC, Yahoo Finance, Benzinga, Seeking Alpha, NPR",
+      "3": "agregadores/blogs/SEO: so pista, nunca base"
+    },
+    "requirements": [
+      "data e hora de publicacao",
+      "2 fontes nivel 1-2 para alto impacto",
+      "confianca: confirmado/reportado/rumor",
+      "persistencia: pontual/regime"
+    ],
+    "gap_stale_atr_h1": 1.0
   }
 }

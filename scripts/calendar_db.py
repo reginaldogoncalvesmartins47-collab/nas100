@@ -4,6 +4,8 @@
 Comandos:
   init                              cria o banco
   upsert ARQUIVO.json               grava/atualiza eventos (lista de objetos)
+  upsert-news ARQUIVO.json          grava noticias (exige data/hora de publicacao)
+  news [--hours 48] [--max-tier 2]  lista noticias recentes por nivel de fonte
   today [--date AAAA-MM-DD] [--min-stars N]   lista eventos do dia
   set-actual --date D --time HH:MM --event NOME --actual VALOR   grava o realizado e calcula a surpresa
   add-reaction --date D --time HH:MM --event NOME --before P --m5 P --m15 P --m60 P   reacao do NAS100 ao evento
@@ -21,6 +23,12 @@ CREATE TABLE IF NOT EXISTS events (
   surprise REAL, relevant_nas INTEGER DEFAULT 1, notes TEXT,
   source TEXT DEFAULT 'investing', captured_at TEXT, updated_at TEXT,
   UNIQUE(date, time_brt, country, event)
+);
+CREATE TABLE IF NOT EXISTS news (
+  id INTEGER PRIMARY KEY,
+  published_at TEXT NOT NULL, captured_at TEXT, headline TEXT NOT NULL, source TEXT NOT NULL, tier INTEGER,
+  url TEXT, category TEXT, impact_nas TEXT, confidence TEXT, persistence TEXT, verified_by TEXT, notes TEXT,
+  UNIQUE(source, headline, published_at)
 );
 CREATE TABLE IF NOT EXISTS reactions (
   event_id INTEGER PRIMARY KEY REFERENCES events(id),
@@ -71,6 +79,24 @@ def cmd_today(con, a):
     for r in rows:
         print(f"{r['time_brt']} {r['country']} {'*'*(r['stars'] or 0):<3} {r['event']} | atual={r['actual']} proj={r['forecast']} ant={r['previous']} surpresa={r['surprise']}")
 
+def cmd_upsert_news(con, a):
+    items = json.load(open(a.file, encoding="utf-8"))
+    for n in items:
+        if not n.get("published_at"):
+            sys.exit(f"noticia sem data/hora de publicacao (descartada pela regra): {n.get('headline')}")
+        con.execute("""INSERT OR IGNORE INTO news(published_at,captured_at,headline,source,tier,url,category,impact_nas,
+                       confidence,persistence,verified_by,notes) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (n["published_at"], now(), n["headline"], n["source"], n.get("tier"), n.get("url"), n.get("category"),
+                     n.get("impact_nas"), n.get("confidence"), n.get("persistence"), n.get("verified_by"), n.get("notes")))
+    con.commit(); print(f"{len(items)} noticia(s) processada(s)")
+
+def cmd_news(con, a):
+    rows = con.execute("SELECT * FROM news WHERE datetime(published_at) >= datetime('now', ?) AND COALESCE(tier,9)<=? "
+                       "ORDER BY published_at DESC", (f"-{a.hours} hours", a.max_tier)).fetchall()
+    if not rows: print(f"Sem noticias gravadas nas ultimas {a.hours}h (tier<={a.max_tier}). Noticias nao capturadas = sem sinal."); return
+    for r in rows:
+        print(f"{r['published_at']} T{r['tier']} [{r['category']}] {r['impact_nas']}/{r['confidence']}/{r['persistence']} {r['headline']} ({r['source']}; 2a fonte: {r['verified_by']})")
+
 def find(con, a):
     r = con.execute("SELECT id FROM events WHERE date=? AND time_brt=? AND event=?", (a.date, a.time, a.event)).fetchone()
     if not r: sys.exit("evento nao encontrado")
@@ -93,6 +119,8 @@ def main():
     sub = p.add_subparsers(dest="cmd", required=True)
     sub.add_parser("init")
     u = sub.add_parser("upsert"); u.add_argument("file")
+    un = sub.add_parser("upsert-news"); un.add_argument("file")
+    nw = sub.add_parser("news"); nw.add_argument("--hours", type=int, default=48); nw.add_argument("--max-tier", type=int, default=2)
     t = sub.add_parser("today"); t.add_argument("--date"); t.add_argument("--min-stars", type=int, default=2)
     for name in ("set-actual", "add-reaction"):
         s = sub.add_parser(name)
@@ -103,6 +131,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
+     "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 
 if __name__ == "__main__":
