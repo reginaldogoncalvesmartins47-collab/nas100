@@ -15,7 +15,7 @@ Comandos:
                                     registra entrada. Limites de capital valem SEMPRE; no treino o gate nao bloqueia (so registra); no real bloqueia
   update-trade --id N --high H --low L [--be-moved]   atualiza maxima/minima desde a ultima vez (mede quanto o trade andou a favor: MFE)
   close-trade --id N --exit-price P --reason stop|alvo1|alvo2|breakeven|trailing|invalidacao|tempo|evento|manual|fim_dia   fecha e calcula R
-  path --id N --price P --quality forte|fraca|lateral|revertendo --pairs sim|parcial|nao [--wick nenhum|superior|inferior --wick-where zona|caminho --note]   leitura do CAMINHO ate a regiao-alvo
+  path --id N --price P --quality forte|fraca|lateral|revertendo --pairs sim|parcial|nao [--o O --h H --l L --c C (ultimo candle fechado: detecta o pavio sozinho) | --wick superior|inferior --wick-where zona|caminho] [--note]   leitura do CAMINHO ate a regiao-alvo
   wick --open O --high H --low L --close C [--atr A]   mede os pavios de um candle (auxilio; decisao e visual)
   stats [--mode treino|real]        acerto, R medio, MFE, quanto devolveu, por motivo de saida e por estado do gate
   themes                            temas e ativos correlacionados (rules.json)
@@ -488,6 +488,16 @@ def cmd_path(con, a):
     if not r: sys.exit("trade nao encontrado ou ja fechado")
     dist = abs(r["entry"] - r["stop"]); sgn = 1 if r["side"] == "compra" else -1
     now_r = (a.price - r["entry"]) * sgn / dist
+    if a.o is not None:
+        if None in (a.h, a.l, a.c): sys.exit("informe --o --h --l --c juntos (ultimo candle fechado)")
+        rng = a.h - a.l; body = abs(a.c - a.o); up = a.h - max(a.o, a.c); lo = min(a.o, a.c) - a.l
+        if rng > 0 and a.wick == "nenhum":
+            if up >= 0.5 * rng and up >= 2 * body: a.wick = "superior"
+            elif lo >= 0.5 * rng and lo >= 2 * body: a.wick = "inferior"
+        if a.wick != "nenhum" and r["target_zone_low"] is not None and not a.wick_where:
+            touched = (a.h >= r["target_zone_low"]) if r["side"] == "compra" else (a.l <= r["target_zone_high"])
+            a.wick_where = "zona" if touched else "caminho"
+        print(f"candle O{a.o} H{a.h} L{a.l} C{a.c}: pavio sup {100*up/rng:.0f}% | inf {100*lo/rng:.0f}% | corpo {100*body/rng:.0f}% -> rejeicao detectada: {a.wick}" if rng > 0 else "candle sem amplitude")
     con.execute("INSERT INTO trade_path(trade_id,at,price,quality,pairs_confirm,note,wick_side,wick_where) VALUES(?,?,?,?,?,?,?,?)",
                 (a.id, now_brt().isoformat(timespec="seconds"), a.price, a.quality, a.pairs, a.note, a.wick, a.wick_where)); con.commit()
     er = edge_r(r); msg = f"agora {now_r:+.2f}R"
@@ -510,7 +520,7 @@ def cmd_wick(con, a):
     for nome, w in (("SUPERIOR (rejeicao de topo)", up), ("INFERIOR (rejeicao de fundo)", lo)):
         if w >= 0.5 * rng and w >= 2 * body: print(f"  possivel rejeicao de pavio {nome} [criterio-hipotese: pavio >= 50% da amplitude e >= 2x o corpo]")
     if a.atr: print(f"  maior pavio = {max(up, lo)/a.atr:.2f} x ATR")
-    print("  Numero ajuda; a decisao e a leitura visual do grafico (a usuaria opera vendo o grafico).")
+    print("  Criterio-hipotese a calibrar com exemplos da usuaria (numeros OHLC).")
 
 def cmd_stats(con, a):
     rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
@@ -573,6 +583,7 @@ def main():
     pt.add_argument("--pairs", choices=["sim", "parcial", "nao"], required=True); pt.add_argument("--note")
     pt.add_argument("--wick", choices=["nenhum", "superior", "inferior"], default="nenhum")
     pt.add_argument("--wick-where", choices=["zona", "caminho"])
+    for k in ("o", "h", "l", "c"): pt.add_argument("--" + k, type=float)
     wk = sub.add_parser("wick"); [wk.add_argument("--" + k, type=float, required=True) for k in ("open", "high", "low", "close")]; wk.add_argument("--atr", type=float)
     st = sub.add_parser("stats"); st.add_argument("--mode", choices=["treino", "real"], default="treino")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")

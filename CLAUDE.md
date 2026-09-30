@@ -34,8 +34,8 @@ Nunca perseguir a manchete. Nao usar noticia fora da janela. Nao aplicar correla
 - Stop e alvo ficam como ordens no broker; o Claude ajusta nas checagens, nunca substitui o stop.
 
 ## Estilo da usuaria
-Ela opera VENDO o grafico e le rejeicao de pavio. Olhar o grafico (screenshot + velas), nao decidir so por numeros;
-numeros (comando `wick`) so ajudam. Saida: alvo = regiao de oferta/demanda; acompanhar o caminho (`path`).
+Ela le rejeicao de pavio. O Claude entende pelos valores de open/high/low/close das velas (nao precisa enxergar o grafico).
+Usar `path --o --h --l --c` e `wick`. Saida: alvo = regiao de oferta/demanda; acompanhar o caminho (`path`).
 
 ## Arquivos
 - `pine/` scripts Pine (TradingView). `nas100_liquidez_v2.pine` e o atual; nao testado ate o momento.

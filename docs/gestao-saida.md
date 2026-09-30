@@ -48,15 +48,19 @@ Ela acompanha **como esta a movimentacao ate la**.
   (parcial, break-even ou trailing). E um aviso, nao uma ordem.
 - `stats` passa a mostrar quantos trades chegaram a borda da regiao-alvo e quanto devolveram depois.
 
-### Sinal principal: rejeicao de pavio (leitura visual)
-A usuaria analisa **rejeicao de pavio** e **opera vendo o grafico**. Entao:
-- O Claude deve **olhar o grafico** (screenshot + velas OHLC via MCP, M15/H1), e nao decidir so por numeros.
-- `path --wick superior|inferior --wick-where zona|caminho` registra o que ele viu. Pavio **contra** o trade, principalmente
-  **na regiao-alvo**, gera alerta para considerar realizar/proteger.
-- `wick --open --high --low --close [--atr]` mede os pavios de um candle (criterio-hipotese: pavio >= 50% da amplitude e
-  >= 2x o corpo). E so um auxilio: a decisao e a leitura visual.
-- **Calibracao:** para o Claude "enxergar" como a usuaria, ela marca exemplos de rejeicao de pavio (prints em
-  `docs/casos/`), bons e ruins, e comparamos com a leitura dele. Sem isso, a leitura visual dele e uma opiniao nao calibrada.
+### Sinal principal: rejeicao de pavio (calculada das velas)
+A usuaria le **rejeicao de pavio**. Para o Claude, **nao precisa enxergar o grafico**: o pavio sai dos valores de
+open, high, low e close.
+- A cada checagem, ler o **ultimo candle fechado** (M15 ou H1, a definir) e rodar:
+  `path --id N --price P --quality ... --pairs ... --o O --h H --l L --c C`. O codigo calcula os pavios, detecta a rejeicao
+  (criterio-hipotese: pavio >= 50% da amplitude e >= 2x o corpo) e diz se foi **na regiao-alvo** ou no caminho.
+- Pavio **contra** o trade, principalmente **na regiao-alvo**, gera alerta para considerar realizar/proteger.
+- `wick --open --high --low --close [--atr]` mede um candle isolado.
+- **Calibracao:** a usuaria passa exemplos em numeros (OHLC) de rejeicoes que ela considera boas e de outras que nao
+  considera, com uma frase de por que. Com eles ajustamos o criterio (50%/2x) ate bater com o dela. Sem isso o criterio
+  e palpite.
+- Limite: os numeros nao mostram contexto que o olho pega de relance (por exemplo, a estrutura em volta). Por isso o
+  alerta e um aviso e o criterio e calibrado com os exemplos dela.
 
 ## 4. Como otimizar com dados (antes da conta real)
 Cada trade entra na tabela `trades` (comandos `open-trade`, `update-trade`, `close-trade`, `stats`):
