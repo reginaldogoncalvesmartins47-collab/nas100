@@ -1,0 +1,13 @@
+# Roadmap
+
+- [x] Estrategia Pine v1 (macro + liquidez) - backtest mostrou 5 trades; teste parou cedo pelo corte de seguranca
+- [x] Estrategia Pine v2 (liquidez + vies manual) - escrita, NAO testada/compilada
+- [ ] Compilar e rodar v2 no Pine Editor (M15, modo teste, capital 1000, limites altos)
+- [ ] Ler backtest e lista de negociacoes; ajustar niveis/gatilho
+- [ ] Definir gatilho exato e criterio de volume (ver docs/metodo.md, secao A DEFINIR)
+- [ ] Conferir lote minimo/valor do ponto/margem do NAS100 na Pepperstone
+- [ ] Ativar Paper Trading (PEPPERSTONE:NAS100, saldo US$ 20) e registrar trades em journal/
+- [ ] Instalar Node/Git/Claude Code e o MCP local (docs/setup-mcp-local.md)
+- [ ] Checagem periodica (ex.: /loop 5m) com o grafico real, somente sinalizando
+- [ ] 30-50 trades na demo; revisar diario semanalmente
+- [ ] Decidir sobre robo (MT5/cTrader) somente depois de resultado positivo na demo
