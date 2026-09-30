@@ -125,7 +125,6 @@
       "confianca: confirmado/reportado/rumor",
       "persistencia: pontual/regime"
     ],
-    "gap_stale_atr_h1": 1.0,
     "window": {
       "sun_mon_sat": "desde a sexta-feira 16:00 BRT ate agora",
       "tue_to_fri": "ultimas 24 horas ate agora",
@@ -254,7 +253,8 @@
     "_nota": "Limites de capital valem SEMPRE (treino e real). Valores de docs/regras-risco.md.",
     "per_trade_usd_max": 1.0,
     "daily_loss_usd": 3.0,
-    "kill_total_usd": 10.0
+    "kill_total_usd": 10.0,
+    "_sem_limite_de_trades": "decisao da usuaria: sem limite de numero de trades; a perda do dia e o corte total contem o excesso"
   },
   "operation_mode": {
     "treino": "demo/Paper Trading: o bot NAO e travado por gate nem por nota; toda entrada e registrada com o estado do gate e a nota da regiao para comparar depois. Limites de capital continuam valendo.",
@@ -406,14 +406,6 @@
         "min": 30,
         "max": 240
       },
-      "gap_stale_atr_h1": {
-        "path": [
-          "gate_1_news",
-          "gap_stale_atr_h1"
-        ],
-        "min": 0.5,
-        "max": 3.0
-      },
       "min_score_with_macro": {
         "path": [
           "regions",
@@ -429,7 +421,38 @@
         ],
         "min": 3,
         "max": 6
+      },
+      "shock_gap_atr_min": {
+        "path": [
+          "shock",
+          "gap_atr_min"
+        ],
+        "min": 0.2,
+        "max": 2.0
+      },
+      "shock_range_atr_min": {
+        "path": [
+          "shock",
+          "range_atr_min"
+        ],
+        "min": 1.2,
+        "max": 4.0
       }
     }
+  },
+  "shock": {
+    "rule": "Gap de abertura, vela enorme ou FVG => CHOQUE. O viés vira VENCIDO e a primeira tarefa (antes do resto do gate) e entender, rapido, o que esta acontecendo.",
+    "doc": "docs/choque-de-mercado.md",
+    "gap_atr_min": 0.5,
+    "range_atr_min": 2.0,
+    "note": "limiares = hipoteses. Gap medido em ATR (sugestao: ATR de H1); vela medida em ATR do mesmo tempo grafico (M5). FVG = lacuna entre o candle de 2 barras atras e o atual.",
+    "time_budget_min": 5,
+    "fast_steps": [
+      "o que mudou (gap, vela, FVG)",
+      "por que (noticias desde a ultima checagem, calendario da ultima hora, snapshot VIX/Brent/US10Y/ES/DXY)",
+      "classificar a causa e redefinir o viés",
+      "regioes (FVG, novos extremos) e trades abertos; so depois o resto do gate"
+    ],
+    "open_trades": "listar e revisar stop/protecao imediatamente"
   }
 }

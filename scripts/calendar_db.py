@@ -21,6 +21,9 @@ Comandos:
                                     o Claude ajusta um parametro PERMITIDO, com evidencia minima, um de cada vez, com historico (real exige aprovacao da usuaria)
   tune-history                      historico de ajustes
   tune-revert --id N                desfaz um ajuste
+  bias [--set alta|baixa|neutro --reason TXT]   vies do dia (mostra o atual; o choque o marca como VENCIDO)
+  shock --o O --h H --l L --c C --atr A [--prev-close PC --atr-gap AH --h1 H2 --l1 L2]   detecta gap, vela enorme e FVG; abre CHOQUE e vence o vies
+  shock-diagnose --id N --category C --cause TXT --confidence alta|media|baixa --bias-after alta|baixa|neutro   diagnostico rapido do choque
   stats [--mode treino|real]        acerto, R medio, MFE, quanto devolveu, por motivo de saida e por estado do gate
   themes                            temas e ativos correlacionados (rules.json)
   add-read --pair P --tf H1|H4|D1 --trend T --why TXT --implication I --confidence C --invalidation TXT   leitura RACIOCINADA de um par (micro nao aceito)
@@ -101,6 +104,14 @@ CREATE TABLE IF NOT EXISTS trade_path (
 CREATE TABLE IF NOT EXISTS param_changes (
   id INTEGER PRIMARY KEY, at TEXT NOT NULL, param TEXT NOT NULL, old_value TEXT, new_value TEXT, reason TEXT NOT NULL,
   evidence_kind TEXT NOT NULL, evidence_n INTEGER NOT NULL, mode TEXT NOT NULL, reverted INTEGER DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS bias_log (
+  id INTEGER PRIMARY KEY, at TEXT NOT NULL, bias TEXT NOT NULL, reason TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS shocks (
+  id INTEGER PRIMARY KEY, detected_at TEXT NOT NULL, kinds TEXT NOT NULL, gap_pts REAL, gap_atr REAL, range_atr REAL,
+  direction TEXT, fvg_low REAL, fvg_high REAL, fvg_dir TEXT, status TEXT DEFAULT 'aberto',
+  category TEXT, cause TEXT, confidence TEXT, diagnosed_at TEXT, notes TEXT
 );
 CREATE TABLE IF NOT EXISTS reactions (
   event_id INTEGER PRIMARY KEY REFERENCES events(id),
@@ -397,6 +408,13 @@ def gate_eval(con):
     min_src = R.get("gate_4_sentiment", {}).get("min_sources", 2)
     news_warn = R.get("gate_1_news", {}).get("incremental_warn_minutes", 60)
     todo, warn = [], []
+    for sh in con.execute("SELECT * FROM shocks WHERE status='aberto' ORDER BY detected_at"):
+        todo.append((f"CHOQUE ABERTO #{sh['id']} ({sh['kinds']}): diagnosticar o que esta acontecendo PRIMEIRO, rapido", f"shock-diagnose --id {sh['id']} --category ... --cause ... --confidence ... --bias-after alta|baixa|neutro"))
+    bl = con.execute("SELECT * FROM bias_log ORDER BY at DESC, id DESC").fetchone()
+    if not bl or not parse_ts(bl["at"]).strftime("%Y-%m-%d") == d:
+        todo.append(("vies do dia nao definido hoje", "definir pela macro do dia: bias --set alta|baixa|neutro --reason TXT"))
+    elif bl["bias"] == "vencido":
+        todo.append(("VIES VENCIDO (choque/noticia): reavaliar e redefinir", "bias --set alta|baixa|neutro --reason TXT (ou shock-diagnose)"))
     def checked_today(name): return con.execute("SELECT checked_at FROM checks WHERE date=? AND name=? ORDER BY checked_at DESC", (d, name)).fetchone()
     nev = con.execute("SELECT COUNT(*) c FROM events WHERE date=? AND COALESCE(stars,0)>=2", (d,)).fetchone()["c"]
     if not nev and not checked_today("calendar"):
@@ -591,6 +609,61 @@ def cmd_tune_revert(con, a):
     con.execute("UPDATE param_changes SET reverted=1 WHERE id=?", (a.id,)); con.commit()
     print(f"desfeito: {r['param']} voltou para {r['old_value']}")
 
+def set_bias(con, bias, reason):
+    con.execute("INSERT INTO bias_log(at,bias,reason) VALUES(?,?,?)", (now_brt().isoformat(timespec="seconds"), bias, reason))
+
+def cmd_bias(con, a):
+    if a.set:
+        if not a.reason: sys.exit("REJEITADO: informe --reason (por que esse vies)")
+        set_bias(con, a.set, a.reason); con.commit(); print("vies registrado:", a.set); return
+    r = con.execute("SELECT * FROM bias_log ORDER BY at DESC, id DESC").fetchone()
+    print("nenhum vies registrado" if not r else f"vies atual: {r['bias'].upper()} desde {r['at']} | motivo: {r['reason']}")
+
+def cmd_shock(con, a):
+    S = load_rules().get("shock", {}); gap_min = S.get("gap_atr_min", 0.5); rng_min = S.get("range_atr_min", 2.0)
+    kinds, gap, gap_atr = [], None, None
+    if a.prev_close is not None:
+        gap = a.o - a.prev_close; gap_atr = abs(gap) / (a.atr_gap or a.atr)
+        if gap_atr >= gap_min: kinds.append("gap")
+    rng = a.h - a.l; rng_atr = rng / a.atr
+    if rng_atr >= rng_min: kinds.append("vela_enorme")
+    fvg = (None, None, None)
+    if a.h1 is not None and a.l1 is not None:
+        if a.l > a.h1: fvg = (a.h1, a.l, "alta")
+        elif a.h < a.l1: fvg = (a.h, a.l1, "baixa")
+        if fvg[2]: kinds.append("fvg")
+    direction = "alta" if ((gap if gap else a.c - a.o) or 0) >= 0 else "baixa"
+    if not kinds:
+        print(f"sem choque (gap {gap_atr if gap_atr is not None else 'n/d'} x ATR < {gap_min}; vela {rng_atr:.2f} x ATR < {rng_min}; sem FVG)."); return
+    con.execute("""INSERT INTO shocks(detected_at,kinds,gap_pts,gap_atr,range_atr,direction,fvg_low,fvg_high,fvg_dir)
+                   VALUES(?,?,?,?,?,?,?,?,?)""", (now_brt().isoformat(timespec="seconds"), ",".join(kinds), gap, gap_atr, rng_atr, direction, fvg[0], fvg[1], fvg[2]))
+    sid = con.execute("SELECT last_insert_rowid()").fetchone()[0]
+    set_bias(con, "vencido", f"choque #{sid} ({','.join(kinds)}): reavaliar")
+    con.commit()
+    print(f"*** CHOQUE DE MERCADO #{sid}: {', '.join(kinds)} | direcao {direction} ***")
+    if gap is not None: print(f"  gap {gap:+.1f} pts ({gap_atr:.2f} x ATR) | vela {rng:.1f} pts ({rng_atr:.2f} x ATR)")
+    if fvg[2]: print(f"  FVG de {fvg[2]}: {fvg[0]} a {fvg[1]}  -> regiao candidata (reteste); pontuar no mapa")
+    print("  VIES = VENCIDO. PRIMEIRA TAREFA (rapido, ~5 min): entender o que esta acontecendo:")
+    print("   1) O que mudou: numeros acima.")
+    print("   2) Por que: `since` + noticias da janela, calendario da ultima hora, snapshot rapido de VIX, Brent, US10Y, ES, DXY.")
+    print("   3) Classificar a causa e diagnosticar: shock-diagnose --id", sid, "--category ... --cause ... --confidence ... --bias-after ...")
+    print("   4) So depois: regioes (FVG, novos extremos) e o restante do gate.")
+    op = con.execute("SELECT * FROM trades WHERE closed_at IS NULL").fetchall()
+    for t in op:
+        print(f"  TRADE ABERTO #{t['id']} ({t['mode']}, {t['side']} em {t['entry']}, stop {t['stop']}): REVISAR stop/protecao AGORA.")
+
+def cmd_shock_diagnose(con, a):
+    r = con.execute("SELECT * FROM shocks WHERE id=? AND status='aberto'", (a.id,)).fetchone()
+    if not r: sys.exit("choque nao encontrado ou ja diagnosticado")
+    conf = a.confidence
+    if a.category == "desconhecida" and conf != "baixa":
+        print("aviso: causa desconhecida => confianca forcada para 'baixa'"); conf = "baixa"
+    con.execute("UPDATE shocks SET status='diagnosticado', category=?, cause=?, confidence=?, diagnosed_at=?, notes=? WHERE id=?",
+                (a.category, a.cause, conf, now_brt().isoformat(timespec="seconds"), a.note, a.id))
+    set_bias(con, a.bias_after, f"apos choque #{a.id} ({a.category}, confianca {conf}): {a.cause}")
+    con.commit(); print(f"choque #{a.id} diagnosticado ({a.category}, confianca {conf}); vies agora {a.bias_after.upper()}")
+    if a.category == "desconhecida": print("  atencao: sem causa confirmada, a leitura do viés tem confianca baixa; continuar procurando a causa.")
+
 def cmd_stats(con, a):
     rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
     if not rows: print(f"sem trades fechados no modo {a.mode}"); return
@@ -659,6 +732,15 @@ def main():
     tn.add_argument("--evidence-n", type=int, required=True); tn.add_argument("--mode", choices=["treino", "real"], default="treino")
     tn.add_argument("--user-approved", action="store_true")
     sub.add_parser("tune-history"); tr = sub.add_parser("tune-revert"); tr.add_argument("--id", type=int, required=True)
+    bs = sub.add_parser("bias"); bs.add_argument("--set", choices=["alta", "baixa", "neutro"]); bs.add_argument("--reason")
+    sk = sub.add_parser("shock"); sk.add_argument("--tf", default="M5"); sk.add_argument("--prev-close", type=float)
+    for k in ("o", "h", "l", "c", "atr"): sk.add_argument("--" + k, type=float, required=True)
+    sk.add_argument("--atr-gap", type=float, help="ATR (ex.: H1) para medir o gap; padrao = --atr")
+    sk.add_argument("--h1", type=float, help="maxima do candle de 2 barras atras (para FVG)"); sk.add_argument("--l1", type=float, help="minima do candle de 2 barras atras (para FVG)")
+    sd = sub.add_parser("shock-diagnose"); sd.add_argument("--id", type=int, required=True)
+    sd.add_argument("--category", required=True, choices=["petroleo", "geopolitica", "ia_tech", "fed_juros", "dados", "resultado", "liquidez_tecnica", "desconhecida"])
+    sd.add_argument("--cause", required=True); sd.add_argument("--confidence", required=True, choices=["alta", "media", "baixa"])
+    sd.add_argument("--bias-after", required=True, choices=["alta", "baixa", "neutro"]); sd.add_argument("--note")
     st = sub.add_parser("stats"); st.add_argument("--mode", choices=["treino", "real"], default="treino")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")
     sm = sub.add_parser("add-sentiment"); sm.add_argument("--source", required=True); sm.add_argument("--metric", required=True)
@@ -695,7 +777,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 

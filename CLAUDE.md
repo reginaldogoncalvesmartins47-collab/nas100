@@ -38,6 +38,11 @@ Ela opera e le rejeicao de pavio em M5. O Claude entende pelos valores de open/h
 Tempos: macro/vies H1 e H4; regioes Fibo H1 (+ refino M15); execucao e saida M5.
 Usar `path --o --h --l --c` e `wick`. Saida: alvo = regiao de oferta/demanda; acompanhar o caminho (`path`).
 
+## Choque de mercado (docs/choque-de-mercado.md)
+Gap, vela enorme ou FVG => `shock` abre CHOQUE e vence o vies. PRIMEIRA tarefa, rapida (~5 min): entender o que esta
+acontecendo (`since`, noticias, pares), `shock-diagnose`, redefinir o vies (`bias --set`). So depois o resto do gate.
+Trades abertos: revisar stop/protecao imediatamente. Sem limite de numero de trades (a perda do dia e o corte total contem).
+
 ## Auto-ajuste (docs/auto-ajuste.md)
 O Claude pode ajustar parametros de hipotese com `tune` (evidencia minima, um por vez, historico, revert; real exige aprovacao
 da usuaria). NUNCA ajustar limites de capital, stop obrigatorio, gate do modo real, regras de data/fonte/janela das noticias.

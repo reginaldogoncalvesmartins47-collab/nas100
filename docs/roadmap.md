@@ -21,7 +21,7 @@
 - [x] Auto-ajuste com limites: tune / tune-history / tune-revert (docs/auto-ajuste.md)
 - [ ] Calibrar o criterio de pavio em M5 com exemplos OHLC da usuaria
 - [ ] Escolher e testar variantes de saida A/B/C/D na demo
-- [ ] Regra do gap e do vies vencido (ainda nao no gate)
+- [x] Choque de mercado (gap/vela enorme/FVG) + vies vencido no gate + sem limite de trades (docs/choque-de-mercado.md)
 - [ ] Confirmar com a usuaria os niveis de fonte (docs/analise-noticias.md)
 - [ ] Calibrar pontos/tolerancias com a base M15 do NAS100 (usuario precisa fornecer o CSV)
 - [ ] Compilar e rodar v2 no Pine Editor (M15, modo teste, capital 1000, limites altos)

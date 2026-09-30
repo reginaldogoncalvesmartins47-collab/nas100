@@ -7,7 +7,7 @@ Conta real: US$ 20. Perda maxima aceita pelo usuario no total: US$ 10 (parar tud
 | Risco por trade | US$ 0,50 a US$ 1 |
 | Perda maxima por dia | US$ 2 a US$ 3 |
 | Corte total | US$ 10 |
-| Trades por dia | 3 a 5 |
+| Trades por dia | **Sem limite** (decisao da usuaria). O que contem o excesso de trades e a perda maxima do dia e o corte total |
 
 Pendente (usuario deve confirmar): lote minimo, valor do ponto e margem do NAS100 na Pepperstone.
 Se o lote minimo exigir risco maior que o permitido para o stop do setup, NAO operar esse setup.
