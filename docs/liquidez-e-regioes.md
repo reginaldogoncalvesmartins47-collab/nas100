@@ -38,6 +38,16 @@ de TF muito pequeno (ruído de M1/M5).
 - Fibo em TF pequeno (M1/M5) gera muitas zonas e pouca informação: não usar como região principal.
 - Redesenhar só quando um novo leg quebrar estrutura (evita "fibo que muda toda hora").
 
+## 3b. Segunda região: Fibo no M15 (camada de refinamento)
+- **Região 1 (H1):** define *onde* estão as zonas fortes e entra na pontuação (seção 4).
+- **Região 2 (M15):** refina a entrada **dentro** de uma região 1 válida. Não cria regiões por conta própria.
+- **Ancoragem (H, a confirmar com o usuário):** depois que o preço reage numa região 1, puxar a Fibo do M15 do
+  extremo da varredura até o topo/fundo do primeiro impulso, usando pivôs objetivos (H: 3 barras de cada lado).
+- **Níveis:** os mesmos da lista configurável (0,236 / 0,382 / 0,5 / 0,618 / 0,786), todos operáveis.
+- **Pontuação:** um nível do M15 só soma se cair **dentro de uma região 1 já válida** (H: +0,5). Sozinho não conta.
+- **Uso:** escolher o ponto de entrada e um stop mais curto que o do H1 (ajuda a conta pequena com lote mínimo).
+- **Teste obrigatório:** comparar trades com e sem a região 2 nos dados históricos M15.
+
 ## 4. Pontuação de regiões (a região NÃO é o gatilho)
 O robô **primeiro pontua regiões** e só depois procura gatilho. Uma região é um grupo de níveis dentro de
 H: 0,3 x ATR(H1) um do outro.
@@ -52,6 +62,7 @@ H: 0,3 x ATR(H1) um do outro.
 | FVG / desequilíbrio não mitigado | +1 |
 | Nível redondo (ex.: 30.000) | +0,5 |
 | Reação anterior no mesmo lugar | +1 |
+| Nível de Fibo M15 dentro de região H1 válida (região 2) | +0,5 |
 
 - Nota mínima para a região contar: **3 (H)** a favor da macro; **4 (H)** se o trade for **contra a macro**.
 - Exemplo (ilustrativo, números inventados): Fibo 0,618 do H1 em 29.480 (+1) coincide com a mínima do dia
