@@ -16,7 +16,7 @@ analise obrigatoria. **Sem analise do calendario feita no dia, nao ha sinal (fal
 ## Janelas
 - **Antes:** posicionamento do usuario permitido; o Claude comenta o plano dentro do cenario.
 - **No instante:** marcar como trade de evento (spread/slippage piores; Paper Trading nao simula isso).
-- **Depois:** ler a reacao contra o consenso antes de novo sinal.
+- **Depois:** ler a reacao contra o consenso para gerir/ajustar o plano; nao perseguir a manchete (ver `docs/contexto-feriados-eventos.md`).
 
 ## Fonte principal: Investing.com (escolha da usuaria)
 - Calendario: https://br.investing.com/economic-calendar (fuso Brasilia, pais EUA, importancia 2 e 3 estrelas).

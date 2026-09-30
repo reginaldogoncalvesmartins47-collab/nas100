@@ -6,6 +6,12 @@ Comandos:
   upsert ARQUIVO.json               grava/atualiza eventos (lista de objetos)
   upsert-news ARQUIVO.json          grava noticias (exige data/hora de publicacao)
   window                            mostra a janela de informacao de agora
+  brief [--date D]                  briefing do dia: feriados, calendario, eventos extras, noticias, planos, pendencias
+  upsert-holidays ARQ.json          feriados (pais, nome, fechado/cedo, fonte)
+  upsert-extra ARQ.json             eventos fora do calendario (cupulas, discursos) - exige published_at com fuso
+  add-plan --theme T --correlated A,B --position TXT [--event-id N|--extra-id N|--event-time ISO]   plano de posicionamento ANTECIPADO
+  close-plan --id N --status concluido|invalidado   encerra plano
+  themes                            temas e ativos correlacionados (rules.json)
   news [--hours N] [--max-tier 2]   lista noticias DENTRO da janela (padrao) por nivel de fonte
   today [--date AAAA-MM-DD] [--min-stars N]   lista eventos do dia
   set-actual --date D --time HH:MM --event NOME --actual VALOR   grava o realizado e calcula a surpresa
@@ -30,6 +36,25 @@ CREATE TABLE IF NOT EXISTS news (
   published_at TEXT NOT NULL, captured_at TEXT, headline TEXT NOT NULL, source TEXT NOT NULL, tier INTEGER,
   url TEXT, category TEXT, impact_nas TEXT, confidence TEXT, persistence TEXT, verified_by TEXT, notes TEXT,
   UNIQUE(source, headline, published_at)
+);
+CREATE TABLE IF NOT EXISTS holidays (
+  id INTEGER PRIMARY KEY,
+  date TEXT NOT NULL, country TEXT NOT NULL, name TEXT NOT NULL, closed INTEGER DEFAULT 1, early_close TEXT,
+  affects_nas TEXT, notes TEXT, source TEXT NOT NULL, tier INTEGER, captured_at TEXT,
+  UNIQUE(date, country, name)
+);
+CREATE TABLE IF NOT EXISTS extra_events (
+  id INTEGER PRIMARY KEY,
+  date TEXT NOT NULL, time_brt TEXT, title TEXT NOT NULL, type TEXT, participants TEXT,
+  status TEXT DEFAULT 'anunciado', expected_impact TEXT, published_at TEXT NOT NULL,
+  source TEXT NOT NULL, tier INTEGER, verified_by TEXT, notes TEXT, captured_at TEXT,
+  UNIQUE(date, title)
+);
+CREATE TABLE IF NOT EXISTS plans (
+  id INTEGER PRIMARY KEY,
+  date TEXT NOT NULL, theme TEXT NOT NULL, ref_table TEXT, ref_id INTEGER, correlated TEXT NOT NULL,
+  scenario_up TEXT, scenario_down TEXT, position_note TEXT NOT NULL, event_time TEXT, lead_minutes INTEGER,
+  anticipated INTEGER, status TEXT DEFAULT 'ativo', created_at TEXT, updated_at TEXT, closed_note TEXT
 );
 CREATE TABLE IF NOT EXISTS reactions (
   event_id INTEGER PRIMARY KEY REFERENCES events(id),
@@ -135,6 +160,107 @@ def cmd_news(con, a):
         print(f"{ts:%Y-%m-%d %H:%M} BRT (ha {age:.1f} h) T{r['tier']} [{r['category']}] {r['impact_nas']}/{r['confidence']}/{r['persistence']} "
               f"{r['headline']} ({r['source']}; 2a fonte: {r['verified_by']})")
 
+def need(d, keys, what):
+    miss = [k for k in keys if not d.get(k)]
+    if miss: sys.exit(f"REJEITADO ({what}): faltam {', '.join(miss)} -> {d}")
+
+def cmd_upsert_holidays(con, a):
+    items = json.load(open(a.file, encoding="utf-8"))
+    for h in items:
+        need(h, ["date", "country", "name", "source"], "feriado")
+        con.execute("""INSERT INTO holidays(date,country,name,closed,early_close,affects_nas,notes,source,tier,captured_at)
+                       VALUES(?,?,?,?,?,?,?,?,?,?)
+                       ON CONFLICT(date,country,name) DO UPDATE SET closed=excluded.closed, early_close=excluded.early_close,
+                       affects_nas=excluded.affects_nas, notes=excluded.notes, source=excluded.source, tier=excluded.tier""",
+                    (h["date"], h["country"], h["name"], h.get("closed", 1), h.get("early_close"), h.get("affects_nas"),
+                     h.get("notes"), h["source"], h.get("tier"), now()))
+    con.commit(); print(f"{len(items)} feriado(s) gravado(s)")
+
+def cmd_upsert_extra(con, a):
+    items = json.load(open(a.file, encoding="utf-8"))
+    for e in items:
+        need(e, ["date", "title", "source", "published_at"], "evento fora do calendario")
+        try: ts = parse_ts(e["published_at"])
+        except Exception: sys.exit(f"REJEITADO (published_at sem data/hora com fuso): {e['title']}")
+        con.execute("""INSERT INTO extra_events(date,time_brt,title,type,participants,status,expected_impact,published_at,
+                       source,tier,verified_by,notes,captured_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)
+                       ON CONFLICT(date,title) DO UPDATE SET time_brt=COALESCE(excluded.time_brt,time_brt),
+                       status=excluded.status, expected_impact=COALESCE(excluded.expected_impact,expected_impact),
+                       verified_by=COALESCE(excluded.verified_by,verified_by), notes=COALESCE(excluded.notes,notes)""",
+                    (e["date"], e.get("time_brt"), e["title"], e.get("type"), e.get("participants"), e.get("status", "anunciado"),
+                     e.get("expected_impact"), ts.isoformat(timespec="minutes"), e["source"], e.get("tier"),
+                     e.get("verified_by"), e.get("notes"), now()))
+    con.commit(); print(f"{len(items)} evento(s) fora do calendario gravado(s)")
+
+def row_time(date, hhmm):
+    return parse_ts(f"{date}T{hhmm}:00-03:00") if hhmm else None
+
+def cmd_add_plan(con, a):
+    n = now_brt(); date = a.date or n.strftime("%Y-%m-%d"); ev_time = None
+    if a.event_id:
+        r = con.execute("SELECT date,time_brt FROM events WHERE id=?", (a.event_id,)).fetchone()
+        if not r: sys.exit("event-id nao existe")
+        ev_time = row_time(r["date"], r["time_brt"]); ref = ("events", a.event_id)
+    elif a.extra_id:
+        r = con.execute("SELECT date,time_brt FROM extra_events WHERE id=?", (a.extra_id,)).fetchone()
+        if not r: sys.exit("extra-id nao existe")
+        ev_time = row_time(r["date"], r["time_brt"]); ref = ("extra_events", a.extra_id)
+    else:
+        ref = (None, None)
+    if a.event_time: ev_time = parse_ts(a.event_time)
+    lead = anticipated = None
+    if ev_time:
+        lead = int((ev_time - n).total_seconds() // 60); anticipated = 1 if lead > 0 else 0
+        if not anticipated: print("AVISO: plano TARDIO (o evento ja ocorreu). Regra: nao operar perseguindo a noticia.")
+    con.execute("""INSERT INTO plans(date,theme,ref_table,ref_id,correlated,scenario_up,scenario_down,position_note,event_time,
+                   lead_minutes,anticipated,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (date, a.theme, ref[0], ref[1], a.correlated, a.up, a.down, a.position,
+                 ev_time.isoformat(timespec="minutes") if ev_time else None, lead, anticipated, now(), now()))
+    con.commit(); print("plano gravado, id", con.execute("SELECT last_insert_rowid()").fetchone()[0])
+
+def cmd_close_plan(con, a):
+    con.execute("UPDATE plans SET status=?, closed_note=?, updated_at=? WHERE id=?", (a.status, a.note, now(), a.id))
+    con.commit(); print("ok")
+
+def cmd_themes(con, a):
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "rules.json")
+    t = json.load(open(path, encoding="utf-8")).get("theme_correlations", {})
+    print("Temas e ativos correlacionados (hipoteses a calibrar):")
+    for k, v in t.items():
+        if not k.startswith("_"): print(f"- {k}: {', '.join(v)}")
+
+def cmd_brief(con, a):
+    n = now_brt(); d = a.date or n.strftime("%Y-%m-%d")
+    print(f"=== BRIEFING DO DIA {d} | agora {n:%H:%M} BRT ===")
+    days = [(datetime.fromisoformat(d) + timedelta(days=i)).strftime("%Y-%m-%d") for i in range(3)]
+    hol = con.execute(f"SELECT * FROM holidays WHERE date IN ({','.join('?'*3)}) ORDER BY date", days).fetchall()
+    print("\n[Feriados hoje e nos proximos 2 dias]")
+    for h in hol:
+        print(f"  {h['date']} {h['country']}: {h['name']} ({'fechado' if h['closed'] else 'aberto'}"
+              f"{', fecha cedo ' + h['early_close'] if h['early_close'] else ''}) fonte={h['source']}")
+    if not hol: print("  nenhum gravado (se o levantamento de feriados nao foi feito, FAZER antes de operar)")
+    print("\n[Calendario (2+ estrelas)]")
+    plan_ref = {(r["ref_table"], r["ref_id"]) for r in con.execute("SELECT ref_table,ref_id FROM plans WHERE status!='invalidado' AND COALESCE(anticipated,1)!=0")}
+    evs = con.execute("SELECT * FROM events WHERE date=? AND COALESCE(stars,0)>=2 AND relevant_nas=1 ORDER BY time_brt", (d,)).fetchall()
+    for e in evs:
+        flag = "  <-- SEM PLANO" if (e["stars"] or 0) >= 3 and ("events", e["id"]) not in plan_ref else ""
+        print(f"  [{e['id']}] {e['time_brt']} {'*'*(e['stars'] or 0)} {e['event']} | atual={e['actual']} proj={e['forecast']}{flag}")
+    if not evs: print("  nenhum gravado (calendario nao capturado = sem sinal)")
+    print("\n[Eventos fora do calendario oficial]")
+    ex = con.execute("SELECT * FROM extra_events WHERE date=? AND status!='cancelado' ORDER BY time_brt", (d,)).fetchall()
+    for e in ex:
+        flag = "  <-- SEM PLANO" if ("extra_events", e["id"]) not in plan_ref else ""
+        print(f"  [{e['id']}] {e['time_brt'] or 'hora n/d'} {e['title']} ({e['type']}; {e['status']}) fonte={e['source']}{flag}")
+    if not ex: print("  nenhum gravado")
+    print("\n[Noticias dentro da janela]")
+    cmd_news(con, argparse.Namespace(hours=None, max_tier=2))
+    print("\n[Planos de posicionamento ativos]")
+    pl = con.execute("SELECT * FROM plans WHERE status='ativo' AND date=? ORDER BY event_time", (d,)).fetchall()
+    for p in pl:
+        warn = "  <-- TARDIO: nao operar pela noticia" if p["anticipated"] == 0 else ""
+        print(f"  [{p['id']}] {p['theme']} | correlacionados: {p['correlated']} | {p['position_note']}{warn}")
+    if not pl: print("  nenhum plano ativo")
+
 def find(con, a):
     r = con.execute("SELECT id FROM events WHERE date=? AND time_brt=? AND event=?", (a.date, a.time, a.event)).fetchone()
     if not r: sys.exit("evento nao encontrado")
@@ -158,6 +284,16 @@ def main():
     sub.add_parser("init")
     u = sub.add_parser("upsert"); u.add_argument("file")
     sub.add_parser("window")
+    sub.add_parser("themes")
+    bf = sub.add_parser("brief"); bf.add_argument("--date")
+    hl = sub.add_parser("upsert-holidays"); hl.add_argument("file")
+    ue = sub.add_parser("upsert-extra"); ue.add_argument("file")
+    ap = sub.add_parser("add-plan")
+    ap.add_argument("--date"); ap.add_argument("--theme", required=True); ap.add_argument("--correlated", required=True)
+    ap.add_argument("--up"); ap.add_argument("--down"); ap.add_argument("--position", required=True)
+    ap.add_argument("--event-id", type=int); ap.add_argument("--extra-id", type=int); ap.add_argument("--event-time")
+    cp = sub.add_parser("close-plan"); cp.add_argument("--id", type=int, required=True)
+    cp.add_argument("--status", choices=["concluido", "invalidado"], required=True); cp.add_argument("--note")
     un = sub.add_parser("upsert-news"); un.add_argument("file")
     nw = sub.add_parser("news"); nw.add_argument("--hours", type=int, default=None); nw.add_argument("--max-tier", type=int, default=2)
     t = sub.add_parser("today"); t.add_argument("--date"); t.add_argument("--min-stars", type=int, default=2)
@@ -170,7 +306,8 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "upsert-news": cmd_upsert_news, "news": cmd_news,
+     "window": cmd_window, "themes": cmd_themes, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 
 if __name__ == "__main__":

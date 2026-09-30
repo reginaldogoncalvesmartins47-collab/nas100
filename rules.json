@@ -61,6 +61,7 @@
     "all_required": [
       "gate_0_calendar: calendario do dia analisado",
       "gate_1_news: noticias/gap analisados e vies nao vencido",
+      "gate_2_context: feriados, eventos extras e plano antecipado com correlacionados feitos; nenhum item SEM PLANO",
       "region_score >= minimo (com ou contra a macro)",
       "reacao do mercado na regiao (varredura valida + fechamento de volta, ou confirmacao definida pelo usuario)",
       "RR ate a proxima liquidez oposta >= 2",
@@ -131,5 +132,69 @@
       "empty_window": "se nao houver noticia dentro da janela, dizer isso; NUNCA recorrer a noticia mais antiga para explicar o movimento",
       "holidays": "feriado dos EUA na segunda: janela a revisar (nao tratado)"
     }
+  },
+  "theme_correlations": {
+    "_nota": "HIPOTESES a calibrar. Ativos a observar junto do NAS100 quando o tema aparece.",
+    "petroleo_geopolitica": [
+      "Brent",
+      "US10Y",
+      "DXY",
+      "ES",
+      "Ouro"
+    ],
+    "china_comercio_tarifas": [
+      "USDCNH",
+      "SOX (semicondutores)",
+      "NVDA",
+      "Brent",
+      "ES"
+    ],
+    "ia_tecnologia": [
+      "NVDA",
+      "SOX (semicondutores)",
+      "MSFT",
+      "US10Y",
+      "ES"
+    ],
+    "fed_juros_inflacao": [
+      "US02Y",
+      "US10Y",
+      "DXY",
+      "ES",
+      "Ouro"
+    ],
+    "dados_macro_eua": [
+      "US10Y",
+      "DXY",
+      "ES",
+      "Brent"
+    ],
+    "resultados_gigantes": [
+      "acao da empresa",
+      "SOX (semicondutores)",
+      "ES"
+    ],
+    "feriado_mercado_fechado": [
+      "liquidez reduzida",
+      "mercados abertos do mesmo setor (ex.: Taiwan/Coreia fechados = semicondutores sem reacao completa)"
+    ]
+  },
+  "gate_2_context": {
+    "rule": "Antes de qualquer entrada: levantar feriados globais de hoje (e dos proximos 2 dias), eventos FORA do calendario oficial (cupulas, reunioes, discursos, como Trump-Xi), analisar o impacto das noticias do dia no NAS100 e montar PLANO DE POSICIONAMENTO ANTECIPADO com os ativos correlacionados.",
+    "doc": "docs/contexto-feriados-eventos.md",
+    "holiday_countries": [
+      "US",
+      "CN",
+      "JP",
+      "KR",
+      "TW",
+      "UK",
+      "DE/UE",
+      "BR"
+    ],
+    "no_chasing": "O Claude nunca espera a noticia sair para entrar. Planos sao criados ANTES do evento (anticipated=1). Plano criado depois do evento e marcado TARDIO e nao gera entrada por manchete.",
+    "after_event": "depois do evento a leitura da reacao serve para gerir/ajustar o plano e ler correlacionados, nao para perseguir a manchete",
+    "memory": "tudo gravado em data/calendario.db (holidays, extra_events, news, plans); comando `brief` mostra pendencias (SEM PLANO, TARDIO) para nada se perder durante o dia",
+    "extra_event_rules": "published_at com fuso obrigatorio; 2 fontes nivel 1-2 para confirmar; status: anunciado/confirmado/ocorrido/cancelado"
   }
 }
