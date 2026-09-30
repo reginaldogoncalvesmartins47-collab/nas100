@@ -1,0 +1,174 @@
+//@version=5
+// NAS100 - Entrada por varredura de liquidez (v2)
+// O macro NAO e calculado aqui: voce escolhe o vies do dia em Inputs.
+// Logica: preco varre um nivel de liquidez (PDH/PDL, PWH/PWL, Asia, Londres),
+// fecha de volta e reverte; entrada a favor do vies, stop atras do pavio,
+// alvo na proxima liquidez do lado oposto.
+// Use em PEPPERSTONE:NAS100, M5 ou M15. Nao testado: valide no Strategy Tester e em demo.
+strategy("NAS100 Liquidez v2", overlay=true, initial_capital=20, currency=currency.USD,
+     default_qty_type=strategy.fixed, default_qty_value=0.01, calc_on_every_tick=false, max_bars_back=500)
+
+// ---------------- Inputs ----------------
+gB = "Vies do dia"
+bias = input.string("Ambos", "Vies (macro definido por voce)", options=["Compra", "Venda", "Ambos"], group=gB)
+
+gN = "Niveis de liquidez"
+usePD  = input.bool(true, "Maxima/minima do dia anterior", group=gN)
+usePW  = input.bool(true, "Maxima/minima da semana anterior", group=gN)
+useAs  = input.bool(true, "Faixa da Asia", group=gN)
+useLo  = input.bool(true, "Faixa de Londres", group=gN)
+asiaS  = input.session("2100-0300", "Sessao Asia (Brasilia)", group=gN)
+londS  = input.session("0400-0800", "Sessao Londres (Brasilia)", group=gN)
+
+gE = "Gatilho"
+closePos = input.float(0.6, "Fechamento na parte favoravel do candle (0-1)", minval=0.5, maxval=1.0, step=0.05, group=gE)
+useVol   = input.bool(false, "Exigir volume do NAS acima da media (tick volume)", group=gE)
+useEsVol = input.bool(false, "Exigir volume do ES acima da media", group=gE)
+esSym    = input.symbol("CME_MINI:ES1!", "ES", group=gE)
+volLen   = input.int(20, "Media de volume (barras)", minval=2, group=gE)
+volMult  = input.float(1.2, "Volume > media x", minval=0.5, step=0.1, group=gE)
+cooldown = input.int(6, "Barras de espera apos uma entrada", minval=0, group=gE)
+
+gR = "Risco / alvo"
+riskCash   = input.float(0.50, "Risco por trade (US$)", minval=0.01, group=gR)
+minRR      = input.float(1.5, "RR minimo ate a proxima liquidez", minval=0.5, step=0.25, group=gR)
+atrLen     = input.int(14, "ATR", minval=1, group=gR)
+atrBuf     = input.float(0.25, "Folga do stop atras do pavio (x ATR)", minval=0.0, step=0.05, group=gR)
+minQty     = input.float(0.01, "Lote minimo da corretora", minval=0.001, step=0.01, group=gR)
+testMode   = input.bool(false, "MODO TESTE: ignora lote minimo (so para validar a logica)", group=gR)
+maxTrades  = input.int(4, "Maximo de trades por dia", minval=1, group=gR)
+dayLossLim = input.float(2.0, "Perda maxima por dia (US$)", minval=0.1, group=gR)
+killLoss   = input.float(10.0, "Corte total: parar se perder (US$)", minval=1.0, group=gR)
+
+gS = "Horario de operacao (Brasilia)"
+sess     = input.session("0600-2320:23456", "Horario", group=gS)
+closeEOD = input.bool(true, "Fechar posicao ao fim do horario", group=gS)
+
+// ---------------- Niveis ----------------
+pdh = usePD ? request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on) : na
+pdl = usePD ? request.security(syminfo.tickerid, "D", low[1],  lookahead=barmerge.lookahead_on) : na
+pwh = usePW ? request.security(syminfo.tickerid, "W", high[1], lookahead=barmerge.lookahead_on) : na
+pwl = usePW ? request.security(syminfo.tickerid, "W", low[1],  lookahead=barmerge.lookahead_on) : na
+
+f_sess(s) =>
+    inS = not na(time(timeframe.period, s, "America/Sao_Paulo"))
+    var float hi = na
+    var float lo = na
+    var float lastHi = na
+    var float lastLo = na
+    if inS and not inS[1]
+        hi := high
+        lo := low
+    else if inS
+        hi := math.max(hi, high)
+        lo := math.min(lo, low)
+    if not inS and inS[1]
+        lastHi := hi
+        lastLo := lo
+    [lastHi, lastLo]
+
+[asiaHi, asiaLo] = f_sess(asiaS)
+[londHi, londLo] = f_sess(londS)
+asH = useAs ? asiaHi : na
+asL = useAs ? asiaLo : na
+loH = useLo ? londHi : na
+loL = useLo ? londLo : na
+
+// ---------------- Varredura ----------------
+f_sweptLow(lv)  => not na(lv) and low  < lv and close > lv
+f_sweptHigh(lv) => not na(lv) and high > lv and close < lv
+
+sweepLong  = f_sweptLow(pdl)  or f_sweptLow(pwl)  or f_sweptLow(asL)  or f_sweptLow(loL)
+sweepShort = f_sweptHigh(pdh) or f_sweptHigh(pwh) or f_sweptHigh(asH) or f_sweptHigh(loH)
+
+rng = high - low
+posInBar = rng > 0 ? (close - low) / rng : 0.5
+reactLong  = posInBar >= closePos
+reactShort = posInBar <= 1 - closePos
+
+nasVolOK = not useVol or volume > ta.sma(volume, volLen) * volMult
+relEs = request.security(esSym, timeframe.period, volume / ta.sma(volume, volLen), lookahead=barmerge.lookahead_off)
+esVolOK = not useEsVol or nz(relEs) >= volMult
+
+// Proxima liquidez do lado oposto
+f_nearestAbove(px, a, b, c, d) =>
+    float r = na
+    for lv in array.from(a, b, c, d)
+        if not na(lv) and lv > px and (na(r) or lv < r)
+            r := lv
+    r
+f_nearestBelow(px, a, b, c, d) =>
+    float r = na
+    for lv in array.from(a, b, c, d)
+        if not na(lv) and lv < px and (na(r) or lv > r)
+            r := lv
+    r
+
+// ---------------- Controles de risco ----------------
+inSession = not na(time(timeframe.period, sess, "America/Sao_Paulo"))
+newDay = ta.change(time("D")) != 0
+var int   tradesToday = 0
+var float dayStartNP  = 0.0
+var int   lastEntryBar = na
+if newDay
+    tradesToday := 0
+    dayStartNP  := strategy.netprofit
+dayOK  = (strategy.netprofit - dayStartNP) > -dayLossLim
+killed = strategy.equity <= strategy.initial_capital - killLoss
+coolOK = na(lastEntryBar) or bar_index - lastEntryBar > cooldown
+canTrade = inSession and dayOK and not killed and tradesToday < maxTrades and strategy.position_size == 0 and coolOK
+
+// ---------------- Entradas ----------------
+atr = ta.atr(atrLen)
+var float slPx = na
+var float tpPx = na
+allowLong  = bias != "Venda"
+allowShort = bias != "Compra"
+
+longSig  = canTrade and allowLong  and sweepLong  and reactLong  and nasVolOK and esVolOK
+shortSig = canTrade and allowShort and sweepShort and reactShort and nasVolOK and esVolOK
+
+if longSig
+    sl = low - atr * atrBuf
+    tp = f_nearestAbove(close, pdh, pwh, asH, loH)
+    dist = close - sl
+    qty = riskCash / dist
+    if dist > 0 and not na(tp) and (tp - close) / dist >= minRR and (testMode or qty >= minQty)
+        slPx := sl
+        tpPx := tp
+        strategy.entry("Long", strategy.long, qty=testMode ? qty : math.floor(qty / minQty) * minQty)
+        tradesToday += 1
+        lastEntryBar := bar_index
+
+if shortSig
+    sl = high + atr * atrBuf
+    tp = f_nearestBelow(close, pdl, pwl, asL, loL)
+    dist = sl - close
+    qty = riskCash / dist
+    if dist > 0 and not na(tp) and (close - tp) / dist >= minRR and (testMode or qty >= minQty)
+        slPx := sl
+        tpPx := tp
+        strategy.entry("Short", strategy.short, qty=testMode ? qty : math.floor(qty / minQty) * minQty)
+        tradesToday += 1
+        lastEntryBar := bar_index
+
+// ---------------- Saidas ----------------
+if strategy.position_size > 0
+    strategy.exit("XL", "Long", stop=slPx, limit=tpPx)
+if strategy.position_size < 0
+    strategy.exit("XS", "Short", stop=slPx, limit=tpPx)
+if closeEOD and not inSession
+    strategy.close_all(comment="Fim do horario")
+
+// ---------------- Visual ----------------
+plot(pdh, "PDH", color=color.new(color.red, 30),   style=plot.style_linebr)
+plot(pdl, "PDL", color=color.new(color.green, 30), style=plot.style_linebr)
+plot(pwh, "PWH", color=color.new(color.orange, 30), style=plot.style_linebr, linewidth=2)
+plot(pwl, "PWL", color=color.new(color.teal, 30),   style=plot.style_linebr, linewidth=2)
+plot(asH, "Asia H", color=color.new(color.purple, 50), style=plot.style_linebr)
+plot(asL, "Asia L", color=color.new(color.purple, 50), style=plot.style_linebr)
+plot(loH, "Londres H", color=color.new(color.blue, 50), style=plot.style_linebr)
+plot(loL, "Londres L", color=color.new(color.blue, 50), style=plot.style_linebr)
+bgcolor(killed ? color.new(color.red, 85) : na)
+alertcondition(longSig,  "Varredura de liquidez: COMPRA", "NAS100: varredura abaixo + reacao")
+alertcondition(shortSig, "Varredura de liquidez: VENDA",  "NAS100: varredura acima + reacao")

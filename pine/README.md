@@ -20,3 +20,11 @@ Rascunho de estrategia baseado no operacional descrito:
 - Se o lote minimo exigir risco maior que o configurado, o trade e ignorado (protecao da conta de US$ 20).
 - Noticias/geopolitica nao entram na regra; servem de filtro manual.
 - Nao executa ordens: gera sinais e alertas. Execucao automatica exige robo na plataforma da corretora.
+
+## v2: `nas100_liquidez_v2.pine`
+Separa macro de entrada. O vies do dia (Compra/Venda/Ambos) e escolhido em Inputs; o script so procura o ponto de entrada:
+- Liquidez = maxima/minima do dia anterior, da semana anterior, faixa da Asia e de Londres (horarios em Brasilia, editaveis).
+- Gatilho = varredura do nivel + candle fechando de volta na parte favoravel + a favor do vies.
+- Stop atras do pavio; alvo na proxima liquidez do lado oposto (RR minimo configuravel).
+- Volume do NAS (tick volume) e do ES sao filtros opcionais, desligados por padrao.
+- Nao testado: valide no Strategy Tester (M15 recomendado) e em demo. Para o backtest, use MODO TESTE, capital 1000 e limites diario/total maiores.
