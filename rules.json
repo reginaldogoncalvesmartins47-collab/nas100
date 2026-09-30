@@ -282,7 +282,10 @@
     "path_monitoring": {
       "command": "path",
       "each_check": "qualidade do caminho (forte/fraca/lateral/revertendo), pares confirmam (sim/parcial/nao), distancia ate a borda da regiao",
-      "alert_hypothesis": "caminho fraca/revertendo + pares sem confirmar + trade ja em +1R => considerar proteger"
+      "alert_hypothesis": "rejeicao de pavio contra o trade (principalmente na regiao-alvo) => considerar realizar/proteger; caminho fraca/revertendo + pares sem confirmar + trade em +1R => considerar proteger",
+      "primary_signal": "rejeicao de pavio (criterio da usuaria, lido VISUALMENTE no grafico); numeros do comando `wick` so ajudam",
+      "how_to_read": "screenshot do grafico + OHLC via MCP (M15/H1); registrar wick_side/wick_where em `path`; calibrar a leitura com exemplos marcados pela usuaria"
     }
-  }
+  },
+  "operation_style": "a usuaria opera VENDO o grafico (leitura visual/discricionaria): o Claude deve olhar o grafico (imagem e velas), nao decidir so por numeros"
 }

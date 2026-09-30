@@ -15,7 +15,8 @@ Comandos:
                                     registra entrada. Limites de capital valem SEMPRE; no treino o gate nao bloqueia (so registra); no real bloqueia
   update-trade --id N --high H --low L [--be-moved]   atualiza maxima/minima desde a ultima vez (mede quanto o trade andou a favor: MFE)
   close-trade --id N --exit-price P --reason stop|alvo1|alvo2|breakeven|trailing|invalidacao|tempo|evento|manual|fim_dia   fecha e calcula R
-  path --id N --price P --quality forte|fraca|lateral|revertendo --pairs sim|parcial|nao [--note]   leitura do CAMINHO ate a regiao-alvo
+  path --id N --price P --quality forte|fraca|lateral|revertendo --pairs sim|parcial|nao [--wick nenhum|superior|inferior --wick-where zona|caminho --note]   leitura do CAMINHO ate a regiao-alvo
+  wick --open O --high H --low L --close C [--atr A]   mede os pavios de um candle (auxilio; decisao e visual)
   stats [--mode treino|real]        acerto, R medio, MFE, quanto devolveu, por motivo de saida e por estado do gate
   themes                            temas e ativos correlacionados (rules.json)
   add-read --pair P --tf H1|H4|D1 --trend T --why TXT --implication I --confidence C --invalidation TXT   leitura RACIOCINADA de um par (micro nao aceito)
@@ -91,7 +92,7 @@ CREATE TABLE IF NOT EXISTS trades (
 );
 CREATE TABLE IF NOT EXISTS trade_path (
   id INTEGER PRIMARY KEY, trade_id INTEGER NOT NULL REFERENCES trades(id), at TEXT NOT NULL, price REAL NOT NULL,
-  quality TEXT NOT NULL, pairs_confirm TEXT NOT NULL, note TEXT
+  quality TEXT NOT NULL, pairs_confirm TEXT NOT NULL, note TEXT, wick_side TEXT, wick_where TEXT
 );
 CREATE TABLE IF NOT EXISTS reactions (
   event_id INTEGER PRIMARY KEY REFERENCES events(id),
@@ -114,7 +115,8 @@ def connect(path):
     con = sqlite3.connect(path); con.row_factory = sqlite3.Row
     con.executescript(SCHEMA)
     for ddl in ("ALTER TABLE plans ADD COLUMN stance TEXT", "ALTER TABLE trades ADD COLUMN target_zone_low REAL",
-                "ALTER TABLE trades ADD COLUMN target_zone_high REAL"):  # bancos criados antes
+                "ALTER TABLE trades ADD COLUMN target_zone_high REAL",
+                "ALTER TABLE trade_path ADD COLUMN wick_side TEXT", "ALTER TABLE trade_path ADD COLUMN wick_where TEXT"):  # bancos criados antes
         try: con.execute(ddl)
         except sqlite3.OperationalError: pass
     return con
@@ -486,15 +488,29 @@ def cmd_path(con, a):
     if not r: sys.exit("trade nao encontrado ou ja fechado")
     dist = abs(r["entry"] - r["stop"]); sgn = 1 if r["side"] == "compra" else -1
     now_r = (a.price - r["entry"]) * sgn / dist
-    con.execute("INSERT INTO trade_path(trade_id,at,price,quality,pairs_confirm,note) VALUES(?,?,?,?,?,?)",
-                (a.id, now_brt().isoformat(timespec="seconds"), a.price, a.quality, a.pairs, a.note)); con.commit()
+    con.execute("INSERT INTO trade_path(trade_id,at,price,quality,pairs_confirm,note,wick_side,wick_where) VALUES(?,?,?,?,?,?,?,?)",
+                (a.id, now_brt().isoformat(timespec="seconds"), a.price, a.quality, a.pairs, a.note, a.wick, a.wick_where)); con.commit()
     er = edge_r(r); msg = f"agora {now_r:+.2f}R"
     if er is not None:
         near = r["target_zone_low"] if r["side"] == "compra" else r["target_zone_high"]
         msg += f" | borda da regiao-alvo a {er:.2f}R da entrada ({abs(near - a.price):.1f} pts do preco)"
     print(msg + f" | caminho {a.quality}, pares confirmam: {a.pairs}")
+    against = (r["side"] == "compra" and a.wick == "superior") or (r["side"] == "venda" and a.wick == "inferior")
+    if against:
+        print(f"ALERTA: REJEICAO DE PAVIO contra o trade ({a.wick}, {a.wick_where or 'local n/i'}). E o seu sinal de saida: considerar realizar/proteger"
+              + (" (na propria regiao-alvo)." if a.wick_where == "zona" else "."))
     if a.quality in ("fraca", "revertendo") and a.pairs != "sim" and (r["mfe_r"] or 0) >= 1:
         print("ALERTA (hipotese do docs/gestao-saida.md): caminho deteriorando, pares sem confirmar e o trade ja andou +1R: considerar proteger (parcial, break-even ou trailing).")
+
+def cmd_wick(con, a):
+    rng = a.high - a.low
+    if rng <= 0: sys.exit("candle sem amplitude")
+    body = abs(a.close - a.open); up = a.high - max(a.open, a.close); lo = min(a.open, a.close) - a.low
+    print(f"amplitude {rng:.1f} | corpo {body:.1f} ({100*body/rng:.0f}%) | pavio superior {up:.1f} ({100*up/rng:.0f}%) | pavio inferior {lo:.1f} ({100*lo/rng:.0f}%)")
+    for nome, w in (("SUPERIOR (rejeicao de topo)", up), ("INFERIOR (rejeicao de fundo)", lo)):
+        if w >= 0.5 * rng and w >= 2 * body: print(f"  possivel rejeicao de pavio {nome} [criterio-hipotese: pavio >= 50% da amplitude e >= 2x o corpo]")
+    if a.atr: print(f"  maior pavio = {max(up, lo)/a.atr:.2f} x ATR")
+    print("  Numero ajuda; a decisao e a leitura visual do grafico (a usuaria opera vendo o grafico).")
 
 def cmd_stats(con, a):
     rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
@@ -555,6 +571,9 @@ def main():
     pt = sub.add_parser("path"); pt.add_argument("--id", type=int, required=True); pt.add_argument("--price", type=float, required=True)
     pt.add_argument("--quality", choices=["forte", "fraca", "lateral", "revertendo"], required=True)
     pt.add_argument("--pairs", choices=["sim", "parcial", "nao"], required=True); pt.add_argument("--note")
+    pt.add_argument("--wick", choices=["nenhum", "superior", "inferior"], default="nenhum")
+    pt.add_argument("--wick-where", choices=["zona", "caminho"])
+    wk = sub.add_parser("wick"); [wk.add_argument("--" + k, type=float, required=True) for k in ("open", "high", "low", "close")]; wk.add_argument("--atr", type=float)
     st = sub.add_parser("stats"); st.add_argument("--mode", choices=["treino", "real"], default="treino")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")
     sm = sub.add_parser("add-sentiment"); sm.add_argument("--source", required=True); sm.add_argument("--metric", required=True)
@@ -591,7 +610,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "path": cmd_path, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 

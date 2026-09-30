@@ -48,6 +48,16 @@ Ela acompanha **como esta a movimentacao ate la**.
   (parcial, break-even ou trailing). E um aviso, nao uma ordem.
 - `stats` passa a mostrar quantos trades chegaram a borda da regiao-alvo e quanto devolveram depois.
 
+### Sinal principal: rejeicao de pavio (leitura visual)
+A usuaria analisa **rejeicao de pavio** e **opera vendo o grafico**. Entao:
+- O Claude deve **olhar o grafico** (screenshot + velas OHLC via MCP, M15/H1), e nao decidir so por numeros.
+- `path --wick superior|inferior --wick-where zona|caminho` registra o que ele viu. Pavio **contra** o trade, principalmente
+  **na regiao-alvo**, gera alerta para considerar realizar/proteger.
+- `wick --open --high --low --close [--atr]` mede os pavios de um candle (criterio-hipotese: pavio >= 50% da amplitude e
+  >= 2x o corpo). E so um auxilio: a decisao e a leitura visual.
+- **Calibracao:** para o Claude "enxergar" como a usuaria, ela marca exemplos de rejeicao de pavio (prints em
+  `docs/casos/`), bons e ruins, e comparamos com a leitura dele. Sem isso, a leitura visual dele e uma opiniao nao calibrada.
+
 ## 4. Como otimizar com dados (antes da conta real)
 Cada trade entra na tabela `trades` (comandos `open-trade`, `update-trade`, `close-trade`, `stats`):
 - **MFE** = quanto o trade andou a favor (em R) no melhor momento. **Devolvido** = MFE - resultado final.
