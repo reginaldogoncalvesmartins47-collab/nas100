@@ -1,0 +1,124 @@
+//@version=5
+// NAS100 - Macro (Brent / Juros / ES) + Varredura de Liquidez
+// Rascunho baseado no operacional descrito: direcao macro pelas correlacoes,
+// entrada na varredura de liquidez (topo/fundo anterior) com volume acima da media.
+// Use em PEPPERSTONE:NAS100, timeframe M5 ou M15. Teste em demo/Strategy Tester antes de qualquer uso real.
+strategy("NAS100 Macro + Liquidez", overlay=true, initial_capital=20, currency=currency.USD,
+     default_qty_type=strategy.fixed, default_qty_value=0.01, calc_on_every_tick=false, max_bars_back=500)
+
+// ---------------- Inputs ----------------
+gM = "Macro"
+brentSym = input.symbol("TVC:UKOIL", "Brent", group=gM)
+yieldSym = input.symbol("TVC:US10Y", "Juros 10Y", group=gM)
+esSym    = input.symbol("CME_MINI:ES1!", "ES (S&P futuro)", group=gM)
+macroLen = input.int(12, "Janela de variacao (barras)", minval=2, group=gM)
+macroThr = input.float(0.0, "Variacao minima (%) para contar ponto", minval=0.0, step=0.01, group=gM)
+minScore = input.int(2, "Score macro minimo (de 3)", minval=1, maxval=3, group=gM)
+
+gL = "Liquidez / Volume"
+pivL    = input.int(10, "Pivot esquerda", minval=2, group=gL)
+pivR    = input.int(3,  "Pivot direita",  minval=1, group=gL)
+volLen  = input.int(20, "Media de volume (barras)", minval=2, group=gL)
+volMult = input.float(1.2, "Volume > media x", minval=0.5, step=0.1, group=gL)
+useVol  = input.bool(true, "Exigir volume acima da media (tick volume no CFD)", group=gL)
+
+gR = "Risco (conta pequena)"
+riskCash   = input.float(0.50, "Risco por trade (US$)", minval=0.01, group=gR)
+rr         = input.float(2.0, "Alvo em R (multiplo do risco)", minval=0.5, step=0.5, group=gR)
+atrLen     = input.int(14, "ATR", minval=1, group=gR)
+atrBuf     = input.float(0.25, "Folga do stop (x ATR)", minval=0.0, step=0.05, group=gR)
+minQty     = input.float(0.01, "Lote minimo da corretora", minval=0.001, step=0.01, group=gR)
+maxTrades  = input.int(4, "Maximo de trades por dia", minval=1, group=gR)
+dayLossLim = input.float(2.0, "Perda maxima por dia (US$)", minval=0.1, group=gR)
+killLoss   = input.float(10.0, "Corte total: parar se perder (US$)", minval=1.0, group=gR)
+
+gS = "Sessao (Brasilia)"
+sess     = input.session("0600-2320:23456", "Horario de operacao", group=gS)
+closeEOD = input.bool(true, "Fechar posicao ao fim do horario", group=gS)
+
+// ---------------- Macro ----------------
+f_roc() => ta.roc(close, macroLen)
+brentRoc = request.security(brentSym, timeframe.period, f_roc(), lookahead=barmerge.lookahead_off)
+yieldRoc = request.security(yieldSym, timeframe.period, f_roc(), lookahead=barmerge.lookahead_off)
+esRoc    = request.security(esSym,    timeframe.period, f_roc(), lookahead=barmerge.lookahead_off)
+
+// Brent caindo e juros caindo favorecem NAS; ES na mesma direcao confirma.
+bullScore = (brentRoc < -macroThr ? 1 : 0) + (yieldRoc < -macroThr ? 1 : 0) + (esRoc > macroThr ? 1 : 0)
+bearScore = (brentRoc >  macroThr ? 1 : 0) + (yieldRoc >  macroThr ? 1 : 0) + (esRoc < -macroThr ? 1 : 0)
+
+// ---------------- Liquidez ----------------
+var float lastSwingLow  = na
+var float lastSwingHigh = na
+var bool  lowUsed  = false
+var bool  highUsed = false
+pl = ta.pivotlow(low,  pivL, pivR)
+ph = ta.pivothigh(high, pivL, pivR)
+if not na(pl)
+    lastSwingLow := pl
+    lowUsed := false
+if not na(ph)
+    lastSwingHigh := ph
+    highUsed := false
+
+// Varredura: pavio passa o nivel e o candle fecha de volta.
+sweepLong  = not na(lastSwingLow)  and not lowUsed  and low  < lastSwingLow  and close > lastSwingLow
+sweepShort = not na(lastSwingHigh) and not highUsed and high > lastSwingHigh and close < lastSwingHigh
+volOK = not useVol or volume > ta.sma(volume, volLen) * volMult
+
+// ---------------- Controles de risco ----------------
+inSession = not na(time(timeframe.period, sess, "America/Sao_Paulo"))
+newDay = ta.change(time("D")) != 0
+var int   tradesToday = 0
+var float dayStartNP  = 0.0
+if newDay
+    tradesToday := 0
+    dayStartNP  := strategy.netprofit
+dayPnL  = strategy.netprofit - dayStartNP
+dayOK   = dayPnL > -dayLossLim
+killed  = strategy.equity <= strategy.initial_capital - killLoss
+canTrade = inSession and dayOK and not killed and tradesToday < maxTrades and strategy.position_size == 0
+
+// ---------------- Entradas ----------------
+atr = ta.atr(atrLen)
+var float slPx = na
+var float tpPx = na
+
+longSig  = canTrade and bullScore >= minScore and bullScore > bearScore and sweepLong  and volOK
+shortSig = canTrade and bearScore >= minScore and bearScore > bullScore and sweepShort and volOK
+
+if longSig
+    sl = low - atr * atrBuf
+    dist = close - sl
+    qty = riskCash / dist
+    if dist > 0 and qty >= minQty
+        slPx := sl
+        tpPx := close + dist * rr
+        strategy.entry("Long", strategy.long, qty=math.floor(qty / minQty) * minQty)
+        tradesToday += 1
+        lowUsed := true
+
+if shortSig
+    sl = high + atr * atrBuf
+    dist = sl - close
+    qty = riskCash / dist
+    if dist > 0 and qty >= minQty
+        slPx := sl
+        tpPx := close - dist * rr
+        strategy.entry("Short", strategy.short, qty=math.floor(qty / minQty) * minQty)
+        tradesToday += 1
+        highUsed := true
+
+// ---------------- Saidas ----------------
+if strategy.position_size > 0
+    strategy.exit("XL", "Long", stop=slPx, limit=tpPx)
+if strategy.position_size < 0
+    strategy.exit("XS", "Short", stop=slPx, limit=tpPx)
+if closeEOD and not inSession
+    strategy.close_all(comment="Fim do horario")
+
+// ---------------- Visual e alertas ----------------
+plot(lastSwingLow,  "Liquidez abaixo (fundo)", color=color.new(color.green, 40), style=plot.style_linebr)
+plot(lastSwingHigh, "Liquidez acima (topo)",   color=color.new(color.red, 40),   style=plot.style_linebr)
+bgcolor(killed ? color.new(color.red, 85) : na)
+alertcondition(longSig,  "Sinal COMPRA NAS100", "Macro + liquidez: COMPRA")
+alertcondition(shortSig, "Sinal VENDA NAS100",  "Macro + liquidez: VENDA")
