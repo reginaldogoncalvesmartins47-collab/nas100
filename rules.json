@@ -510,5 +510,17 @@
   "account": {
     "capital_usd": 30,
     "_nota": "conta de US$ 30 (decisao da usuaria). Limites de risco NAO foram alterados por causa disso: US$ 1 por trade, US$ 3 por dia, corte total US$ 10, ate a usuaria dizer o contrario."
+  },
+  "cost_control": {
+    "doc": "docs/custo-tokens.md",
+    "status": "sem medicao; medir no 1o dia de demo",
+    "principles": [
+      "memoria no banco, execucoes curtas",
+      "Claude acorda por evento (regiao proxima, trade aberto, choque, horario de evento, rotinas fixas), nao por relogio",
+      "modelo menor para rotina, mais forte para diagnostico e entrada",
+      "ler menos: since, renew-read, brief; CLAUDE.md enxuto"
+    ],
+    "never_trade_off": "stop no broker e limites de capital",
+    "watcher_script": "ainda nao existe (depende de como os precos chegam ao script)"
   }
 }
