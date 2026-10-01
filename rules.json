@@ -249,11 +249,13 @@
     "context_only_note": "COT (dados de terca, divulgado na sexta: 8-10 dias de defasagem) e AAII (semanal) sao so contexto estrutural; registrar com --data-date; NAO contam para o minimo de 2 fontes do dia"
   },
   "risk": {
-    "_nota": "Limites de capital valem SEMPRE (treino e real). Valores de docs/regras-risco.md.",
-    "per_trade_usd_max": 1.0,
-    "daily_loss_usd": 3.0,
+    "_origem": "Unico numero dado pela usuaria: pode perder ate US$ 10 (corte total). Risco por trade e perda do dia NAO foram definidos por ela: eram sugestoes minhas e foram removidos como regra fixa.",
+    "per_trade_usd_max": null,
+    "daily_loss_usd": null,
     "kill_total_usd": 10.0,
-    "_sem_limite_de_trades": "decisao da usuaria: sem limite de numero de trades; a perda do dia e o corte total contem o excesso"
+    "_demo": "na demo nada disso para o bot (so avisa); stop obrigatorio continua (precisa dele para medir o R)",
+    "_real": "antes do real a usuaria precisa definir o risco maximo por trade (o `ready` cobra); kill total de US$ 10 para o bot no real",
+    "_sem_limite_de_trades": "decisao da usuaria: sem limite de numero de trades"
   },
   "operation_mode": {
     "treino": "demo/Paper Trading: o bot NAO e travado por gate, nota da regiao, perda do dia nem corte total (esses dois so AVISAM e registram 'no real teria parado'). Continuam valendo no treino: stop obrigatorio e risco maximo por trade. Tudo e registrado para comparar depois.",
@@ -508,7 +510,7 @@
   },
   "account": {
     "capital_usd": 30,
-    "_nota": "conta de US$ 30 (decisao da usuaria). Limites de risco NAO foram alterados por causa disso: US$ 1 por trade, US$ 3 por dia, corte total US$ 10, ate a usuaria dizer o contrario."
+    "_nota": "conta de US$ 30 (decisao da usuaria). Unico limite dado por ela: perder ate US$ 10 no total."
   },
   "cost_control": {
     "doc": "docs/custo-tokens.md",

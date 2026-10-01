@@ -1,34 +1,34 @@
 # Regras de risco
 
-Conta real: US$ 30 (antes US$ 20; decisao da usuaria). Perda maxima aceita pelo usuario no total: US$ 10 (parar tudo e revisar).
-Os limites em dolares (US$ 1 por trade, US$ 3 por dia, corte US$ 10) **nao mudaram** com o novo capital; a usuaria pode ajustar.
+## O que a usuaria decidiu
+- Conta: **US$ 30** (antes US$ 20).
+- Pode perder ate **US$ 10 no total** (corte: parar tudo e revisar).
+- **Sem limite** de numero de trades.
+- Quer **liberdade para operar**: o bot nao deve ser travado na demo.
 
-| Regra | Valor sugerido |
-|---|---|
-| Risco por trade | US$ 0,50 a US$ 1 |
-| Perda maxima por dia | US$ 2 a US$ 3 |
-| Corte total | US$ 10 |
-| Trades por dia | **Sem limite** (decisao da usuaria). O que contem o excesso de trades e a perda maxima do dia e o corte total |
+## O que NAO foi decidido por ela (e eu tinha colocado como regra por engano)
+- Risco maximo por trade: **nao definido**. (US$ 0,50-1 era sugestao minha e nao funciona bem: obrigaria stops curtos demais.)
+- Perda maxima do dia: **nao definida**.
+Ate ela definir, esses dois nao existem como regra. Antes do **real**, o risco maximo por trade precisa ser definido por ela
+(o `ready` cobra isso).
 
-Pendente (usuario deve confirmar): lote minimo, valor do ponto e margem do NAS100 na Pepperstone.
-Se o lote minimo exigir risco maior que o permitido para o stop do setup, NAO operar esse setup.
-
-## Demo (Paper Trading, saldo US$ 30)
-- Mesmas regras do real. Meta: 30 a 50 trades antes de concluir qualquer coisa.
-- Paper Trading nao simula spread/slippage reais; em eventos fortes o real tende a ser pior.
-- Marcar no diario os "trades de evento" para separar a estatistica.
-
-## Backtest no TradingView
-Para validar logica (nao a conta de US$ 30): modo teste ligado, capital 1000, limites diario/total altos.
-Comparar em R (multiplos do risco), nao em dolares. Sem o ajuste, o corte de seguranca desliga o teste cedo.
+## Como o stop e o tamanho funcionam sem esses limites
+- **O stop e definido pelo mercado** (alem do extremo do pavio + folga de ATR), nao pelo dinheiro. Um stop apertado so para caber
+  num valor em dolares seria parado por ruido.
+- O **lote** e o minimo (ou calculado). O **risco real** de cada entrada e **mostrado e registrado** (`entry-check --usd-per-point`),
+  para aprender qual risco o stop do mercado impoe na conta de US$ 30.
+- O valor do ponto e o lote minimo na Pepperstone ainda precisam ser confirmados.
 
 ## O que para o bot e o que so avisa
 | Regra | Treino (demo) | Real |
 |---|---|---|
-| Stop obrigatorio e do lado certo | **Para** | **Para** |
-| Risco maximo por trade (US$ 1) | **Para** | **Para** |
-| Perda maxima do dia (US$ 3) | So avisa e registra "no real teria parado" | **Para** |
-| Corte total (US$ 10) | So avisa e registra | **Para** |
+| Stop obrigatorio e do lado certo | **Para** (sem stop nao ha R) | **Para** |
+| Risco maximo por trade | Nao definido; se a usuaria definir, so avisa | **Exige estar definido**; acima disso, para |
+| Perda do dia | Nao definida | Se definida, para |
+| Corte total (US$ 10) | So avisa e registra "no real teria parado" | **Para** |
 | Gate / nota da regiao | So registra | Gate obrigatorio; nota minima vale |
 | Numero de trades | Sem limite | Sem limite |
 Motivo: na demo o dinheiro e ficticio e parar cedo interromperia a coleta de dados que permite aprender rapido.
+
+## Backtest no TradingView
+Para validar a logica (nao a conta): modo teste ligado, capital 1000. Comparar em R, nao em dolares.

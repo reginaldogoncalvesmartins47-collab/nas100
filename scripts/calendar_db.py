@@ -468,7 +468,7 @@ def cmd_gate(con, a):
 
 def risk_cfg():
     r = load_rules().get("risk", {})
-    return r.get("per_trade_usd_max", 1.0), r.get("daily_loss_usd", 3.0), r.get("kill_total_usd", 10.0)
+    return r.get("per_trade_usd_max"), r.get("daily_loss_usd"), r.get("kill_total_usd", 10.0)  # None = a usuaria ainda nao definiu
 
 def cmd_open_trade(con, a):
     per, daily, kill = risk_cfg(); n = now_brt(); d = n.strftime("%Y-%m-%d"); dist = abs(a.entry - a.stop)
@@ -477,11 +477,15 @@ def cmd_open_trade(con, a):
     if (a.zone_low is None) != (a.zone_high is None): sys.exit("REJEITADO: informe --zone-low e --zone-high juntos")
     if a.zone_low is not None and ((a.side == "compra" and a.zone_low <= a.entry) or (a.side == "venda" and a.zone_high >= a.entry) or a.zone_low > a.zone_high):
         sys.exit("REJEITADO: regiao-alvo do lado errado (compra: zona de oferta ACIMA da entrada; venda: zona de demanda ABAIXO)")
-    if a.risk_usd > per: sys.exit(f"REJEITADO: risco US$ {a.risk_usd} acima do maximo por trade US$ {per}. Limite de capital vale sempre (treino e real).")
+    if per is None:
+        if a.mode == "real": sys.exit("REJEITADO (real): a usuaria ainda nao definiu o risco maximo por trade. Definir antes de operar no real.")
+    elif a.risk_usd > per:
+        if a.mode == "real": sys.exit(f"REJEITADO (real): risco US$ {a.risk_usd} acima do maximo por trade definido pela usuaria (US$ {per}).")
+        print(f"AVISO (treino): risco US$ {a.risk_usd} acima do maximo definido (US$ {per}); registrado.")
     today = con.execute("SELECT COALESCE(SUM(result_usd),0) s FROM trades WHERE mode=? AND closed_at LIKE ?", (a.mode, d + "%")).fetchone()["s"]
     total = con.execute("SELECT COALESCE(SUM(result_usd),0) s FROM trades WHERE mode=? AND closed_at IS NOT NULL", (a.mode,)).fetchone()["s"]
     would_stop = []
-    if today <= -daily:
+    if daily is not None and today <= -daily:
         if a.mode == "real": sys.exit(f"REJEITADO: perda do dia US$ {today:.2f} atingiu o limite US$ {daily}. Parar por hoje.")
         would_stop.append(f"perda do dia US$ {today:.2f} passou do limite US$ {daily}")
     if total <= -kill:
@@ -699,6 +703,7 @@ def cmd_ready(con, a):
         (lower > 0, f"ganho medio descontando a incerteza da amostra: {lower:+.2f}R (precisa ser positivo)"),
         (pf >= need_pf, f"lucro bruto / prejuizo bruto: {pf:.2f} (minimo {need_pf})"),
         (dd <= max_dd, f"maior queda acumulada: {dd:.1f}R (maximo {max_dd}R)"),
+        (risk_cfg()[0] is not None, "risco maximo por trade para o REAL definido pela usuaria (hoje: nao definido)"),
     ]
     for ok, msg in checks: print(("  OK   " if ok else "  FALTA") + " " + msg)
     if all(ok for ok, _ in checks):
@@ -742,13 +747,18 @@ def cmd_entry_check(con, a):
         if rr < min_rr: flags.append(f"RR {rr:.2f} abaixo do minimo {min_rr}")
         tgt_txt = f" --target1 {near} --zone-low {a.target_low} --zone-high {a.target_high}"
     else: flags.append("sem regiao-alvo informada: definir antes de entrar")
+    per = risk_cfg()[0]
     if a.usd_per_point:
-        raw = a.risk_usd / (dist * a.usd_per_point); size = max(a.min_lot, round(raw / a.min_lot) * a.min_lot)
+        if a.risk_usd is None: size = a.min_lot
+        else: raw = a.risk_usd / (dist * a.usd_per_point); size = max(a.min_lot, round(raw / a.min_lot) * a.min_lot)
         real_risk = size * dist * a.usd_per_point
-        print(f"  tamanho: {size:.2f} lote(s) | risco real nesse stop: US$ {real_risk:.2f} (alvo de risco US$ {a.risk_usd})")
-        if real_risk > a.risk_usd * 1.05: flags.append(f"o lote minimo faz o risco real (US$ {real_risk:.2f}) passar do alvo (US$ {a.risk_usd}); limite maximo por trade: US$ {risk_cfg()[0]}")
-        size_txt = f" --size {size:.2f} --risk-usd {min(real_risk, risk_cfg()[0]):.2f}"
-    else: size_txt = f" --risk-usd {a.risk_usd}"
+        print(f"  tamanho: {size:.2f} lote(s) | risco REAL nesse stop: US$ {real_risk:.2f}" + (f" (alvo de risco US$ {a.risk_usd})" if a.risk_usd is not None else " (lote minimo; o stop e definido pelo mercado, nao pelo dinheiro)"))
+        if a.risk_usd is not None and real_risk > a.risk_usd * 1.05: flags.append(f"o lote minimo faz o risco real (US$ {real_risk:.2f}) passar do alvo (US$ {a.risk_usd})")
+        if per is not None and real_risk > per: flags.append(f"risco real acima do maximo definido pela usuaria (US$ {per})")
+        size_txt = f" --size {size:.2f} --risk-usd {real_risk:.2f}"
+    else:
+        flags.append("sem --usd-per-point nao da para calcular o risco real; informar o valor do ponto na Pepperstone")
+        size_txt = f" --risk-usd {a.risk_usd if a.risk_usd is not None else 'CALCULAR'}"
     for f in flags: print("  aviso:", f)
     print(f"  registrar: open-trade --mode treino --side {side} --entry {entry} --stop {stop:.1f}{tgt_txt}{size_txt} --region-score {a.score} --bias {bias}")
 
@@ -835,7 +845,7 @@ def main():
     for k in ("zone-low", "zone-high", "o", "h", "l", "c", "atr"): ec.add_argument("--" + k, type=float, required=True)
     ec.add_argument("--score", type=float); ec.add_argument("--bias", choices=["alta", "baixa", "neutro"])
     ec.add_argument("--target-low", type=float); ec.add_argument("--target-high", type=float)
-    ec.add_argument("--risk-usd", type=float, default=0.5); ec.add_argument("--usd-per-point", type=float, help="USD por ponto para 1 lote (confirmar na Pepperstone)")
+    ec.add_argument("--risk-usd", type=float, default=None); ec.add_argument("--usd-per-point", type=float, help="USD por ponto para 1 lote (confirmar na Pepperstone)")
     ec.add_argument("--min-lot", type=float, default=0.01)
     st = sub.add_parser("stats"); st.add_argument("--mode", choices=["treino", "real"], default="treino")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")

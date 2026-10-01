@@ -12,7 +12,7 @@ dos limites (tune), explica em portugues simples e pergunta so decisoes de negoc
 capital, stop obrigatorio ou o gate do modo real. Veredito para a conta real: `python scripts/calendar_db.py ready`.
 
 ## Regras que valem sempre
-- Conta real pequena (US$ 30; limites em dolares inalterados ate a usuaria dizer o contrario): risco por trade e corte total estao em `docs/regras-risco.md`. Nao relaxar.
+- Conta real pequena (US$ 30). Unico limite dado por ela: pode perder ate US$ 10 no total. Risco por trade e perda do dia NAO foram definidos por ela (docs/regras-risco.md): nao inventar limites.
 - **O Claude executa as ordens; a usuaria nao clica** (decisao dela, docs/execucao.md). Treino (Paper Trading): autorizado.
   Conta real: so depois de `ready` cumprido + autorizacao escrita da usuaria dada UMA vez (nao por trade) + stop/alvo como
   ordens na corretora + limites de capital ligados. Toda ordem nasce com stop e alvo.
@@ -36,7 +36,7 @@ incremental (`since`). Leitura de par sem mudanca: `renew-read`. Antes de evento
 Nunca perseguir a manchete. Nao usar noticia fora da janela. Nao aplicar correlacao mecanica.
 
 ## Modos e saida
-- Treino (demo): NAO trava por gate, nota, perda do dia nem corte total (estes so avisam e registram 'no real teria parado'). Valem sempre: stop obrigatorio e risco maximo por trade.
+- Treino (demo): NAO trava por gate, nota, perda do dia nem corte total (estes so avisam e registram 'no real teria parado'). Vale sempre: stop obrigatorio (definido pelo mercado, nao pelo dinheiro).
 - Real: so depois de resultado positivo em amostra grande; gate LIBERADO obrigatorio.
 - Todo trade: stop obrigatorio, plano de saida definido antes (docs/gestao-saida.md), registrado em `trades` (MFE, devolvido).
 - Stop e alvo ficam como ordens no broker; o Claude ajusta nas checagens, nunca substitui o stop.
