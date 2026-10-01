@@ -8,6 +8,11 @@ A usuaria nao e tecnica e a prioridade dela e **o lucro**. Este documento fixa c
 | **Claude** | Parametros tecnicos (pavio, break-even, validades, limiares de choque, notas de regiao...) dentro de `tuning.tunable`, com evidencia minima e historico (`docs/auto-ajuste.md`). Explica em portugues simples. |
 | **Usuaria** | Quanto arriscar, quando ir para o real, em quais fontes confia, a meta de lucro. O Claude so pergunta decisoes de negocio/risco, nao tecnicas. |
 
+## Prioridade declarada: crescer o caixa
+A usuaria prioriza **fazer o caixa crescer**. Na pratica: realizar ganho (ex.: saiu em ~US$ 22-24 no caso 02) pesa mais do que esperar o
+maximo de cada trade, e **nao devolver o que ja foi ganho** e central (por isso a protecao progressiva e o aviso de pavio). O comando
+`goal` mostra o caixa e o crescimento percentual no treino (so representativo se o tamanho das posicoes for o da conta real).
+
 ## Meta e limite informados pela usuaria
 - Ganho: **sem teto**; gostaria de **pelo menos US$ 25 a 30** (periodo nao informado).
 - Perda total aceita: **uns US$ 15** (incerto).

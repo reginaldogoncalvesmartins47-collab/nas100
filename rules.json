@@ -483,13 +483,14 @@
     "command": "ready"
   },
   "objective": {
-    "priority": "lucro liquido (depois de spread/custos), medido em R medio por trade",
+    "priority": "CRESCER O CAIXA (capital realizado), medido em R medio por trade e no crescimento da conta; lucro liquido depois de custos",
     "hard_limit": "o lucro nunca e buscado afrouxando os limites de capital, o stop obrigatorio ou o gate do modo real",
     "who_decides": {
       "claude": "parametros tecnicos dentro de tuning.tunable, com evidencia e historico",
       "user": "quanto arriscar, quando ir para o real, quais fontes confiar, meta de lucro"
     },
-    "communication": "a usuaria nao e tecnica: explicar em portugues simples, dizer o que significa na pratica, e perguntar so decisoes de negocio/risco"
+    "communication": "a usuaria nao e tecnica: explicar em portugues simples, dizer o que significa na pratica, e perguntar so decisoes de negocio/risco",
+    "cash_first": "a usuaria prioriza crescer o caixa: realizar ganho (ex.: caso 02 saiu em ~US$ 22-24) vale mais que esperar o maximo de cada trade; nao perder o que ja foi ganho"
   },
   "entry_trigger": {
     "rule": "Regiao ja pontuada + o preco chega nela + em M5 o MERCADO mostra a reacao: rejeicao de pavio na regiao, a favor do viés, e o candle fecha sem romper a regiao. Nao antecipar: esperar o candle M5 FECHAR.",

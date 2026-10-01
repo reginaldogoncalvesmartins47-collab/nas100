@@ -771,7 +771,9 @@ def cmd_goal(con, a):
     if not rows: print("Sem trades fechados com valor em dolares ainda."); return
     v = [r["result_usd"] for r in rows]; n = len(v); mean = sum(v) / n; tot = sum(v)
     losses = [x for x in v if x < 0]; avg_loss = sum(losses) / len(losses) if losses else 0
+    cap = R.get("account", {}).get("capital_usd")
     print(f"Resultado no treino: US$ {tot:+.2f} em {n} trades | media por trade US$ {mean:+.3f}")
+    if cap: print(f"Caixa (base US$ {cap}): US$ {cap + tot:.2f} ({100 * tot / cap:+.1f}%) - so vale se os trades do treino tiverem o tamanho da conta real")
     if mean > 0: print(f"No ritmo atual: ~{int(lo / mean) + 1} trades para chegar a US$ {lo}.")
     else: print("No ritmo atual a media por trade nao e positiva: a meta nao e atingida por este caminho.")
     if avg_loss < 0: print(f"Perda media por trade perdedor: US$ {avg_loss:.2f} -> ~{int(kill / abs(avg_loss)) + 1} stops seguidos chegariam ao limite de US$ {kill}.")
