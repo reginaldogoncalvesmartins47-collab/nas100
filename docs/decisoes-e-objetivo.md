@@ -8,6 +8,12 @@ A usuaria nao e tecnica e a prioridade dela e **o lucro**. Este documento fixa c
 | **Claude** | Parametros tecnicos (pavio, break-even, validades, limiares de choque, notas de regiao...) dentro de `tuning.tunable`, com evidencia minima e historico (`docs/auto-ajuste.md`). Explica em portugues simples. |
 | **Usuaria** | Quanto arriscar, quando ir para o real, em quais fontes confia, a meta de lucro. O Claude so pergunta decisoes de negocio/risco, nao tecnicas. |
 
+## Meta e limite informados pela usuaria
+- Ganho: **sem teto**; gostaria de **pelo menos US$ 25 a 30** (periodo nao informado).
+- Perda total aceita: **uns US$ 15** (incerto).
+- Conta de US$ 30: a meta e cerca de 83-100% da conta e a perda aceita e 50%. Ambicioso; sem garantia.
+- Comando `goal`: mostra quantos trades e quantos stops, no ritmo medido do treino, separam da meta e do limite.
+
 ## O que "lucro como prioridade" significa aqui
 - Medida: **lucro liquido depois dos custos** (spread/slippage), em **R por trade** (R = o que se arrisca em cada trade).
 - **Nunca** se busca lucro afrouxando o que protege o capital: limites de risco, stop obrigatorio e o gate do modo real.

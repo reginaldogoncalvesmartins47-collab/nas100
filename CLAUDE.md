@@ -12,7 +12,7 @@ dos limites (tune), explica em portugues simples e pergunta so decisoes de negoc
 capital, stop obrigatorio ou o gate do modo real. Veredito para a conta real: `python scripts/calendar_db.py ready`.
 
 ## Regras que valem sempre
-- Conta real pequena (US$ 30). Unico limite dado por ela: pode perder ate US$ 10 no total. Risco por trade e perda do dia NAO foram definidos por ela (docs/regras-risco.md): nao inventar limites.
+- Conta real pequena (US$ 30). Unico limite dado por ela: pode perder ate 'uns US$ 15' no total (incerto; antes US$ 10; confirmar). Risco por trade e perda do dia NAO foram definidos por ela (docs/regras-risco.md): nao inventar limites.
 - **O Claude executa as ordens; a usuaria nao clica** (decisao dela, docs/execucao.md). Treino (Paper Trading): autorizado.
   Conta real: so depois de `ready` cumprido + autorizacao escrita da usuaria dada UMA vez (nao por trade) + stop/alvo como
   ordens na corretora + limites de capital ligados. Toda ordem nasce com stop e alvo.

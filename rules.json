@@ -249,12 +249,12 @@
     "context_only_note": "COT (dados de terca, divulgado na sexta: 8-10 dias de defasagem) e AAII (semanal) sao so contexto estrutural; registrar com --data-date; NAO contam para o minimo de 2 fontes do dia"
   },
   "risk": {
-    "_origem": "Unico numero dado pela usuaria: pode perder ate US$ 10 (corte total). Risco por trade e perda do dia NAO foram definidos por ela: eram sugestoes minhas e foram removidos como regra fixa.",
+    "_origem": "Numero dado pela usuaria: pode perder ate 'uns US$ 15' no total (incerto; antes disse US$ 10). Risco por trade e perda do dia NAO foram definidos por ela: eram sugestoes minhas e foram removidos como regra fixa.",
     "per_trade_usd_max": null,
     "daily_loss_usd": null,
-    "kill_total_usd": 10.0,
+    "kill_total_usd": 15.0,
     "_demo": "na demo nada disso para o bot (so avisa); stop obrigatorio continua (precisa dele para medir o R)",
-    "_real": "antes do real a usuaria precisa definir o risco maximo por trade (o `ready` cobra); kill total de US$ 10 para o bot no real",
+    "_real": "antes do real a usuaria precisa definir o risco maximo por trade (o `ready` cobra); o corte total (US$ 15, a confirmar) para o bot no real",
     "_sem_limite_de_trades": "decisao da usuaria: sem limite de numero de trades"
   },
   "operation_mode": {
@@ -510,7 +510,7 @@
   },
   "account": {
     "capital_usd": 30,
-    "_nota": "conta de US$ 30 (decisao da usuaria). Unico limite dado por ela: perder ate US$ 10 no total."
+    "_nota": "conta de US$ 30 (decisao da usuaria). Perda total aceita: 'uns US$ 15' (incerto)."
   },
   "cost_control": {
     "doc": "docs/custo-tokens.md",
@@ -530,5 +530,13 @@
     "days": "dias em que o mercado do NAS100 na Pepperstone estiver aberto (confirmar horarios e a pausa diaria com a corretora)",
     "limit_awareness": "o limite de uso do plano Pro pode interromper o Claude; stops ficam no broker; acompanhar `/usage` e, se estiver acabando, nao abrir novas entradas",
     "pine_note": "os scripts Pine trazem 06:00-23:20 como padrao de sessao; ajustar/desligar nos Inputs"
+  },
+  "goal": {
+    "min_gain_usd": 25,
+    "max_gain_usd": 30,
+    "cap": "SEM teto de ganho ('o ceu e o limite'); nao parar por ter ganho",
+    "period": "NAO informado pela usuaria (por dia? semana? mes?) - perguntar",
+    "note": "meta dela 'falando por cima'; 25-30 sobre US$ 30 e cerca de 83-100% da conta; nao garantido",
+    "command": "goal"
   }
 }

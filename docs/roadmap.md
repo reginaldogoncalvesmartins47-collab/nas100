@@ -24,6 +24,8 @@
 - [x] Plano de custo em tokens (docs/custo-tokens.md)
 - [x] Sem janela de horario fixa (trabalha enquanto a usuaria mantiver ligado)
 - [x] Corrigido: risco por trade e perda do dia eram sugestoes minhas, nao dela; removidos como regra (docs/regras-risco.md)
+- [x] Meta de ganho (US$ 25-30, sem teto) e perda aceita (~US$ 15) registradas; comando `goal`
+- [ ] A usuaria dizer em que PERIODO e a meta e confirmar a perda de US$ 15
 - [ ] A usuaria definir o risco maximo por trade antes do real (o `ready` cobra)
 - [ ] Medir o consumo de tokens no 1o dia de demo (/cost) e decidir frequencia/modelo
 - [ ] Teste de aceitacao da execucao no Paper Trading (primeiro marco no PC da usuaria)

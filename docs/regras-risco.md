@@ -2,7 +2,8 @@
 
 ## O que a usuaria decidiu
 - Conta: **US$ 30** (antes US$ 20).
-- Pode perder ate **US$ 10 no total** (corte: parar tudo e revisar).
+- Pode perder ate **uns US$ 15 no total** (incerto: antes disse US$ 10) - corte: parar tudo e revisar.
+- **Meta de ganho:** pelo menos US$ 25 a 30, **sem teto** ("o ceu e o limite"). Periodo nao informado.
 - **Sem limite** de numero de trades.
 - Quer **liberdade para operar**: o bot nao deve ser travado na demo.
 
@@ -25,7 +26,7 @@ Ate ela definir, esses dois nao existem como regra. Antes do **real**, o risco m
 | Stop obrigatorio e do lado certo | **Para** (sem stop nao ha R) | **Para** |
 | Risco maximo por trade | Nao definido; se a usuaria definir, so avisa | **Exige estar definido**; acima disso, para |
 | Perda do dia | Nao definida | Se definida, para |
-| Corte total (US$ 10) | So avisa e registra "no real teria parado" | **Para** |
+| Corte total (US$ 15, a confirmar) | So avisa e registra "no real teria parado" | **Para** |
 | Gate / nota da regiao | So registra | Gate obrigatorio; nota minima vale |
 | Numero de trades | Sem limite | Sem limite |
 Motivo: na demo o dinheiro e ficticio e parar cedo interromperia a coleta de dados que permite aprender rapido.
