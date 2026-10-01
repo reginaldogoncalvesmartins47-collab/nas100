@@ -28,6 +28,7 @@
 - [x] Caso 02 (venda na regiao de oferta, saida ~US$ 22-24) registrado
 - [x] Tamanho usual informado: 0,1 (account.usual_lot)
 - [x] Fase de descoberta definida (docs/descoberta.md) + texto de primeira execucao (docs/primeira-execucao.md) + add-fact/facts
+- [x] Perguntas separadas: o que o Claude descobre e o que so a usuaria sabe (docs/perguntas-abertas.md)
 - [ ] Rodar a descoberta no PC (valor do ponto, saldo, historico de trades, scripts dela, ferramentas do MCP)
 - [ ] A usuaria dizer em que PERIODO e a meta e confirmar a perda de US$ 15
 - [ ] A usuaria definir o risco maximo por trade antes do real (o `ready` cobra)
