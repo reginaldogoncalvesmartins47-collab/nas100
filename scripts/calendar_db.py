@@ -28,6 +28,7 @@ Comandos:
                                     GATILHO de entrada em M5: toque na regiao + rejeicao de pavio a favor + fechou sem romper; calcula stop, alvo, RR e lote
   add-fact --key K --value V --source S --confidence alta|media|baixa   grava algo DESCOBERTO (chaves de conta atualizam rules.json)
   facts                             o que ja foi descoberto
+  review [--mode --days 7]          REVISAO semanal: dias, meta batida, devolvido, entradas que o real barraria e sugestao de ajuste da expectativa
   daily [--mode --date]             META DO DIA: resultado de hoje, estado (normal/proteger/piso) e historico de dias do treino
   goal                              meta de ganho x limite de perda: quantos trades/stops no ritmo atual (treino)
   ready                             veredito em portugues simples: ja da para ir para a conta real? (criterios do treino)
@@ -848,6 +849,37 @@ def cmd_daily(con, a):
         print("Este historico e a medida real de quao alcancavel a meta diaria e; amostra pequena nao prova nada.")
     else: print("Sem historico de dias ainda.")
 
+def cmd_review(con, a):
+    n = now_brt(); start = n - timedelta(days=a.days); lo, hi, floor_pct = daily_cfg()
+    rows = [r for r in con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall() if parse_ts(r["closed_at"]) >= start]
+    print(f"=== REVISAO ({a.mode}) | ultimos {a.days} dias | meta: US$ {lo} a {hi} por dia ===")
+    if not rows: print("Sem trades fechados no periodo. Nada a revisar."); return
+    by = {}
+    for r in rows: by.setdefault(r["closed_at"][:10], []).append(r)
+    dias = {d: sum(x["result_usd"] or 0 for x in v) for d, v in by.items()}
+    vals = list(dias.values()); hit = sum(1 for x in vals if x >= lo); avg = lambda xs: sum(xs) / len(xs) if xs else 0
+    R = [r["result_r"] for r in rows if r["result_r"] is not None]
+    give = [(r["mfe_r"] or 0) - r["result_r"] for r in rows if r["result_r"] is not None]
+    print(f"Dias operados: {len(vals)} | resultado por dia: " + ", ".join(f"{d[5:]}: {v:+.2f}" for d, v in sorted(dias.items())))
+    print(f"Media por dia US$ {avg(vals):+.2f} | melhor US$ {max(vals):+.2f} | pior US$ {min(vals):+.2f} | dias que bateram a meta: {hit} de {len(vals)}")
+    print(f"Trades: {len(rows)} | acerto {100 * sum(1 for x in R if x > 0) / max(1, len(R)):.0f}% | R medio {avg(R):+.2f} | devolveu em media {avg(give):.2f}R")
+    flagged = [r for r in rows if r["notes"] and "no real" in r["notes"]]
+    print(f"Entradas que no REAL teriam sido barradas (martingale, piso, perda): {len(flagged)} de {len(rows)}")
+    ch = con.execute("SELECT * FROM param_changes WHERE reverted=0 ORDER BY at DESC").fetchall()
+    ch = [c for c in ch if parse_ts(c["at"]) >= start]
+    if ch: print("Ajustes de parametros no periodo: " + "; ".join(f"{c['param']} {c['old_value']}->{c['new_value']}" for c in ch))
+    print("O que os dados sugerem (so sugestao; a meta e decisao da usuaria):")
+    if len(vals) < 5: print(" - amostra pequena (menos de 5 dias): nao ajustar a expectativa ainda.")
+    elif hit == 0:
+        pos = sorted(x for x in vals if x > 0)
+        alvo = pos[len(pos) // 2] if pos else 0
+        print(f" - a meta de US$ {lo} nao foi batida em nenhum dia. Um degrau intermediario realista seria perto da mediana dos dias positivos (~US$ {alvo:.2f}); subir a meta de volta conforme os dados melhorarem.")
+    elif hit / len(vals) < 0.3: print(f" - meta batida em {hit} de {len(vals)} dias: tratar como dia bom, nao como rotina; planejar com a media (US$ {avg(vals):+.2f}/dia).")
+    else: print(f" - meta batida em {hit} de {len(vals)} dias: manter e verificar se vem com risco crescente (olhar o piso e o martingale).")
+    if avg(give) > 1: print(" - os trades devolvem muito do que andaram a favor: revisar a regra de saida (variantes A-E em docs/gestao-saida.md).")
+    if flagged: print(" - ha entradas que o real barraria: antes de ir para o real, tratar esse habito do sistema.")
+    print("Amostra pequena nao prova nada.")
+
 def cmd_stats(con, a):
     rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
     if not rows: print(f"sem trades fechados no modo {a.mode}"); return
@@ -926,6 +958,7 @@ def main():
     sd.add_argument("--cause", required=True); sd.add_argument("--confidence", required=True, choices=["alta", "media", "baixa"])
     sd.add_argument("--bias-after", required=True, choices=["alta", "baixa", "neutro"]); sd.add_argument("--note")
     sub.add_parser("ready"); sub.add_parser("goal"); sub.add_parser("facts")
+    rv = sub.add_parser("review"); rv.add_argument("--mode", choices=["treino", "real"], default="treino"); rv.add_argument("--days", type=int, default=7)
     dl = sub.add_parser("daily"); dl.add_argument("--mode", choices=["treino", "real"], default="treino"); dl.add_argument("--date")
     af = sub.add_parser("add-fact"); af.add_argument("--key", required=True); af.add_argument("--value", required=True)
     af.add_argument("--source", required=True); af.add_argument("--confidence", choices=["alta", "media", "baixa"], required=True)
@@ -972,7 +1005,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "ready": cmd_ready, "daily": cmd_daily, "facts": cmd_facts, "add-fact": cmd_add_fact, "goal": cmd_goal, "entry-check": cmd_entry_check, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "ready": cmd_ready, "daily": cmd_daily, "review": cmd_review, "facts": cmd_facts, "add-fact": cmd_add_fact, "goal": cmd_goal, "entry-check": cmd_entry_check, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 

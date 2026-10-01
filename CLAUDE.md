@@ -55,6 +55,8 @@ Usar `path --o --h --l --c` e `wick`. Saida: alvo = regiao de oferta/demanda; ac
 Meta da usuaria: US$ 25-30 POR DIA, sem teto. Persegue-se escolhendo melhores trades, NUNCA arriscando mais: sem martingale (lote nao sobe apos perda),
 sem entrada sem gatilho, sem afrouxar stop. Apos bater a meta: proteger o caixa (piso de 50% do melhor ponto do dia). `daily` mostra o dia e o historico.
 
+Revisao semanal: `review` mostra os dias e sugere ajustar a EXPECTATIVA com dados (docs/revisao-semanal.md); nunca o risco para alcanca-la.
+
 ## Choque de mercado (docs/choque-de-mercado.md)
 Gap, vela enorme ou FVG => `shock` abre CHOQUE e vence o vies. PRIMEIRA tarefa, rapida (~5 min): entender o que esta
 acontecendo (`since`, noticias, pares), `shock-diagnose`, redefinir o vies (`bias --set`). So depois o resto do gate.

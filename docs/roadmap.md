@@ -31,6 +31,7 @@
 - [x] Perguntas separadas: o que o Claude descobre e o que so a usuaria sabe (docs/perguntas-abertas.md)
 - [ ] Rodar a descoberta no PC (valor do ponto, saldo, historico de trades, scripts dela, ferramentas do MCP)
 - [x] Meta diaria (US$ 25-30/dia, sem teto) com protecoes: sem martingale, piso apos a meta, `daily`
+- [x] Revisao semanal e ajuste de expectativas por dados (`review`, docs/revisao-semanal.md)
 - [ ] A usuaria confirmar a perda de US$ 15
 - [ ] A usuaria definir o risco maximo por trade antes do real (o `ready` cobra)
 - [ ] Medir o consumo de tokens no 1o dia de demo (/cost) e decidir frequencia/modelo
