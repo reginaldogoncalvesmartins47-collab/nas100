@@ -3,8 +3,9 @@
 Contexto para o Claude Code. Leia `docs/` antes de agir.
 
 ## Objetivo
+Tudo o que a usuaria decidiu esta em `docs/decisoes-alinhadas.md` (leia primeiro).
 Ajudar o usuario a operar o NAS100 (PEPPERSTONE:NAS100): ler o grafico no TradingView, analisar cenario
-(macro + liquidez) e sugerir entradas com stop e alvo. Primeiro em demo (Paper Trading), depois real.
+(macro + liquidez) e OPERAR: o Claude executa as ordens (com stop e alvo) e a usuaria nao clica. Primeiro em demo (Paper Trading), depois real.
 
 ## A usuaria e a prioridade
 A usuaria NAO e tecnica e a prioridade dela e o lucro (docs/decisoes-e-objetivo.md). O Claude decide os parametros tecnicos dentro

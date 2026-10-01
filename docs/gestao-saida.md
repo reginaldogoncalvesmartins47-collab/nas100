@@ -82,4 +82,4 @@ A) stop e alvo fixos; B) break-even em +1R; C) parcial de 50% em +1R + trailing;
 - Amostra pequena nao prova nada (30 a 50 trades por variante, no minimo).
 - Demo nao simula spread/slippage reais; os numeros do real serao piores.
 - MFE depende de o Claude atualizar o trade com a maxima/minima; se faltar checagem, o MFE fica subestimado.
-- O sistema so sinaliza e registra; quem executa e a usuaria (ou um robo na corretora, decidido depois).
+- Quem executa e o Claude (docs/execucao.md); robo na corretora e uma opcao a decidir depois, se o resultado na demo for positivo.

@@ -12,4 +12,4 @@ O MCP oficial do TradingView exige plano Essential+; este caminho nao usa o MCP 
 5. Reiniciar o Claude Code e rodar `tv_health_check`.
 
 Cuidados: a porta 9222 da controle total do app a programas locais; usar so no PC pessoal.
-Verificar os termos de uso do TradingView. O MCP nao executa ordens.
+Verificar os termos de uso do TradingView. Nao sei se este MCP coloca ordens (a descoberta vai verificar: docs/descoberta.md); a execucao no Paper Trading sera testada na aceitacao (docs/execucao.md).

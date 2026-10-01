@@ -1,7 +1,7 @@
 # Fluxo de analise (quando o preco chega na regiao)
 
 Decisao v1: regioes = liquidez + Fibo (H1, refino M15). SMC (LuxAlgo) = fator opcional futuro.
-Modo: somente sinal. O usuario executa. Numeros em `rules.json` sao hipoteses.
+Modo: o Claude executa (docs/execucao.md). Numeros tecnicos em `rules.json` sao hipoteses.
 
 ## Passo a passo
 1. **Mapa do dia:** listar regioes pontuadas (liquidez valida + Fibo H1 + refino M15). Guardar so as com nota minima.
@@ -12,7 +12,7 @@ Modo: somente sinal. O usuario executa. Numeros em `rules.json` sao hipoteses.
    - Reacao do mercado: varredura valida + fechamento de volta (ou confirmacao do usuario).
    - Alvo = proxima liquidez oposta; RR >= 2?
    - Horario e limites de risco (lote minimo x stop na conta de US$ 30).
-4. **Saida:** "sem setup" (com o motivo) ou sinal com entrada, stop, alvo e nota. Nada de ordem automatica.
+4. **Saida:** "sem setup" (com o motivo) ou sinal com entrada, stop, alvo e nota. Se houver gatilho, o Claude coloca a ordem com stop e alvo (treino no Paper Trading).
 5. **Registro:** gravar a decisao e os valores em `journal/diario_trades.csv` (inclusive os "sem setup").
 
 ## SMC como fator futuro

@@ -1,5 +1,5 @@
 {
-  "_status": "RASCUNHO: todos os numeros sao hipoteses a calibrar com dados. Modo: somente sinal, sem ordens.",
+  "_status": "RASCUNHO: numeros tecnicos sao hipoteses a calibrar com dados. O Claude executa as ordens (treino no Paper Trading; real so com ready + autorizacao unica da usuaria). Tudo que a usuaria decidiu esta em docs/decisoes-alinhadas.md.",
   "instrument": "PEPPERSTONE:NAS100",
   "days": "seg-sex",
   "bias_source": "usuario (macro do dia: Brent, juros, ES, calendario, geopolitica)",
@@ -73,7 +73,7 @@
     "_gate_behavior": "BLOQUEADO = lista de pendencias a concluir agora (prioridade do Claude). Sem trava de horario: a usuaria liga/desliga o PC."
   },
   "risk_ref": "docs/regras-risco.md",
-  "mode": "signal_only",
+  "mode": "claude_executa",
   "gate_0_calendar": {
     "rule": "ANTES de qualquer entrada do dia, analisar o calendario economico. Sem analise do calendario feita hoje, nao ha sinal (falha fechada).",
     "doc": "docs/analise-calendario.md",

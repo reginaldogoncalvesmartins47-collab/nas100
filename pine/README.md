@@ -19,7 +19,8 @@ Rascunho de estrategia baseado no operacional descrito:
 - O backtest no TradingView nao simula spread/slippage reais da Pepperstone.
 - Se o lote minimo exigir risco maior que o configurado, o trade e ignorado (protecao da conta de US$ 30).
 - Noticias/geopolitica nao entram na regra; servem de filtro manual.
-- Nao executa ordens: gera sinais e alertas. Execucao automatica exige robo na plataforma da corretora.
+- O Pine **nao executa ordens**: serve para backtest e alertas. Quem executa no projeto e o Claude (docs/execucao.md).
+- Os limites padrao de trades/dia e perda do dia estao desligados (999 e 1000): a usuaria nao quer limite de trades e nao definiu perda por dia. Corte total padrao: US$ 15.
 
 ## v2: `nas100_liquidez_v2.pine`
 Separa macro de entrada. O vies do dia (Compra/Venda/Ambos) e escolhido em Inputs; o script so procura o ponto de entrada:

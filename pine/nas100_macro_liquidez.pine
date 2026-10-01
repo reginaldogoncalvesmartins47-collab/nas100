@@ -32,9 +32,9 @@ atrLen     = input.int(14, "ATR", minval=1, group=gR)
 atrBuf     = input.float(0.25, "Folga do stop (x ATR)", minval=0.0, step=0.05, group=gR)
 minQty     = input.float(0.01, "Lote minimo da corretora", minval=0.001, step=0.01, group=gR)
 testMode   = input.bool(false, "MODO TESTE: ignora lote minimo (so para validar a logica no backtest)", group=gR)
-maxTrades  = input.int(4, "Maximo de trades por dia", minval=1, group=gR)
-dayLossLim = input.float(2.0, "Perda maxima por dia (US$)", minval=0.1, group=gR)
-killLoss   = input.float(10.0, "Corte total: parar se perder (US$)", minval=1.0, group=gR)
+maxTrades  = input.int(999, "Maximo de trades por dia", minval=1, group=gR)
+dayLossLim = input.float(1000.0, "Perda maxima por dia (US$)", minval=0.1, group=gR)
+killLoss   = input.float(15.0, "Corte total: parar se perder (US$)", minval=1.0, group=gR)
 
 gS = "Sessao (Brasilia)"
 sess     = input.session("0600-2320:23456", "Horario de operacao", group=gS)

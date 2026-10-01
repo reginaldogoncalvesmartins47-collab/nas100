@@ -1,6 +1,6 @@
 # Metodo de operacao (NAS100)
 
-Fonte: descricao do usuario na conversa. Itens marcados A DEFINIR ainda nao foram decididos.
+Fonte: descricao da usuaria na conversa. Resumo geral de tudo que foi decidido: docs/decisoes-alinhadas.md.
 
 ## 1. Direcao macro (vies do dia) - decidida pelo usuario
 Motores do NAS no dia a dia:
@@ -23,8 +23,9 @@ Abordagem em teste:
 ## 2b. Regioes e liquidez valida
 Ver `docs/liquidez-e-regioes.md` (criterios de liquidez valida, Fibo no H1, pontuacao de regioes).
 
-## 3. A DEFINIR
-- Gatilho exato alem da varredura (FVG depois da varredura? CHoCH? horario?).
-- Como julgar volume do Brent/ES (criterio objetivo).
-- Quais horarios de Asia/Londres o usuario considera (defaults no script sao palpite).
-- Regras de saida alem do alvo na proxima liquidez (parcial, break-even).
+## 3. Estado das definicoes (atualizado)
+- **Gatilho de entrada: DEFINIDO** (M5): regiao pontuada + preco chega + rejeicao de pavio a favor do viés + candle fecha sem romper a regiao (`entry-check`, rules.json > entry_trigger).
+- **Saida: DEFINIDA** (docs/gestao-saida.md): alvo = regiao de oferta/demanda, acompanhar o caminho, pavio como sinal; variantes A-E a testar.
+- **Volume:** so como filtro opcional; criterio objetivo ainda nao definido (juros nao tem volume; Brent CFD nao tem volume real).
+- **Horarios de Asia/Londres:** defaults do script sao palpite; a descoberta/usuaria confirmam.
+- **Painel proprio (analistamacro.prospectia.space):** que dados expoe sera lido na fase de descoberta.

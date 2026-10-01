@@ -1,5 +1,7 @@
 # Roadmap
 
+Resumo geral das decisoes: docs/decisoes-alinhadas.md. Itens abaixo marcados [x] estao definidos; [ ] estao em aberto.
+
 - [x] Estrategia Pine v1 (macro + liquidez) - backtest mostrou 5 trades; teste parou cedo pelo corte de seguranca
 - [x] Estrategia Pine v2 (liquidez + vies manual) - escrita, NAO testada/compilada
 - [x] Documento de liquidez valida, Fibo H1 e pontuacao de regioes (hipoteses a calibrar)
@@ -43,10 +45,14 @@
 - [ ] Calibrar pontos/tolerancias com a base M15 do NAS100 (usuario precisa fornecer o CSV)
 - [ ] Compilar e rodar v2 no Pine Editor (M15, modo teste, capital 1000, limites altos)
 - [ ] Ler backtest e lista de negociacoes; ajustar niveis/gatilho
-- [ ] Definir gatilho exato e criterio de volume (ver docs/metodo.md, secao A DEFINIR)
+- [x] Gatilho exato definido (M5, rejeicao de pavio na regiao a favor do viés); criterio de volume: so opcional (docs/metodo.md)
 - [ ] Conferir lote minimo/valor do ponto/margem do NAS100 na Pepperstone
 - [ ] Ativar Paper Trading (PEPPERSTONE:NAS100, saldo US$ 30) e registrar trades em journal/
 - [ ] Instalar Node/Git/Claude Code e o MCP local (docs/setup-mcp-local.md)
-- [ ] Checagem periodica (ex.: /loop 5m) com o grafico real, somente sinalizando
+- [ ] Checagem periodica com cadencia adaptativa (30 min de base; 5 min com regiao proxima, trade aberto ou choque), executando no Paper Trading (substitui a antiga ideia de so sinalizar)
 - [ ] 30-50 trades na demo; revisar diario semanalmente
 - [ ] Decidir sobre robo (MT5/cTrader) somente depois de resultado positivo na demo
+
+- [x] Auditoria: README na raiz, docs/decisoes-alinhadas.md, docs/smc-luxalgo.md, textos 'so sinaliza' corrigidos, padroes do Pine alinhados
+- [ ] Backtest da logica nos dados M15 da skill nas100-trader-copiloto (a usuaria precisa fornecer o CSV)
+- [ ] Versao derivada do SMC com saidas numericas (opcional, depois do treino)
