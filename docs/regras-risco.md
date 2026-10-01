@@ -33,3 +33,9 @@ Motivo: na demo o dinheiro e ficticio e parar cedo interromperia a coleta de dad
 
 ## Backtest no TradingView
 Para validar a logica (nao a conta): modo teste ligado, capital 1000. Comparar em R, nao em dolares.
+
+## Pendencia importante: tamanho real das posicoes (inferido do caso 02)
+No print do caso 02 a posicao aparece como **-1** (venda de 1) com **+US$ 24,30**. Se 1 = uma unidade do NAS100 a US$ 1 por ponto,
+**um stop de 20 pontos custaria ~US$ 20**, quase a conta inteira de US$ 30, e a margem de 1 unidade seria muito maior que a conta.
+Isso indica que o **Paper Trading da usuaria pode estar com saldo bem maior que US$ 30** (o padrao costuma ser alto; nao confirmado).
+Se for isso, os resultados de demo **nao representam** a conta de US$ 30. **Confirmar:** tamanho usado, saldo do Paper Trading e valor do ponto.

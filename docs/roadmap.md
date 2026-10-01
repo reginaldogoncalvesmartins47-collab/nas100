@@ -25,6 +25,8 @@
 - [x] Sem janela de horario fixa (trabalha enquanto a usuaria mantiver ligado)
 - [x] Corrigido: risco por trade e perda do dia eram sugestoes minhas, nao dela; removidos como regra (docs/regras-risco.md)
 - [x] Meta de ganho (US$ 25-30, sem teto) e perda aceita (~US$ 15) registradas; comando `goal`
+- [x] Caso 02 (venda na regiao de oferta, saida ~US$ 22-24) registrado
+- [ ] Confirmar tamanho/saldo do Paper Trading e valor do ponto (caso 02 sugere posicao de 1 unidade)
 - [ ] A usuaria dizer em que PERIODO e a meta e confirmar a perda de US$ 15
 - [ ] A usuaria definir o risco maximo por trade antes do real (o `ready` cobra)
 - [ ] Medir o consumo de tokens no 1o dia de demo (/cost) e decidir frequencia/modelo

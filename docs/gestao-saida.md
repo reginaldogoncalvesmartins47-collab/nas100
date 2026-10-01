@@ -76,7 +76,7 @@ Decisoes guiadas pelos numeros (exemplos de leitura):
 - Muitos trades chegam a +1R e terminam em 0 ou negativo => justifica parcial/break-even em +1R.
 - Break-even tira muitos trades que depois iriam ao alvo => mover o break-even para +1,5R ou usar trailing por estrutura.
 Experimento: rodar variantes em sequencia, uma por vez, com o mesmo numero de trades:
-A) stop e alvo fixos; B) break-even em +1R; C) parcial de 50% em +1R + trailing; D) saida na borda da regiao-alvo x meio x borda distante. Comparar R medio e devolvido.
+A) stop e alvo fixos; B) break-even em +1R; C) parcial de 50% em +1R + trailing; D) saida na borda da regiao-alvo x meio x borda distante; E) saida ao atingir ganho fixo em pontos/dolares (caso 02: ~US$ 22-24). Comparar R medio e devolvido.
 
 ## 5. Limites
 - Amostra pequena nao prova nada (30 a 50 trades por variante, no minimo).
