@@ -28,6 +28,7 @@ Comandos:
                                     GATILHO de entrada em M5: toque na regiao + rejeicao de pavio a favor + fechou sem romper; calcula stop, alvo, RR e lote
   add-fact --key K --value V --source S --confidence alta|media|baixa   grava algo DESCOBERTO (chaves de conta atualizam rules.json)
   facts                             o que ja foi descoberto
+  daily [--mode --date]             META DO DIA: resultado de hoje, estado (normal/proteger/piso) e historico de dias do treino
   goal                              meta de ganho x limite de perda: quantos trades/stops no ritmo atual (treino)
   ready                             veredito em portugues simples: ja da para ir para a conta real? (criterios do treino)
   stats [--mode treino|real]        acerto, R medio, MFE, quanto devolveu, por motivo de saida e por estado do gate
@@ -500,6 +501,16 @@ def cmd_open_trade(con, a):
     if would_stop:
         print("AVISO (treino: NAO para, para nao interromper o aprendizado): no REAL o bot pararia aqui -> " + "; ".join(would_stop))
         a.notes = ((a.notes + " | ") if a.notes else "") + "no real teria parado: " + "; ".join(would_stop)
+    lo, hi, floor_pct = daily_cfg(); ds = day_state(con, a.mode, d); day_stops = []
+    if ds["peak"] >= lo and ds["pnl"] <= ds["peak"] * floor_pct / 100:
+        day_stops.append(f"piso do ganho do dia atingido (resultado US$ {ds['pnl']:.2f} <= {floor_pct}% do melhor ponto US$ {ds['peak']:.2f})")
+    ref = ds["last_size"] or load_rules().get("account", {}).get("usual_lot")
+    if a.size and ds["pnl"] < 0 and ref and a.size > ref:
+        day_stops.append(f"tamanho aumentado depois de perda no dia ({a.size:g} > {ref:g}): martingale, o que mais quebra contas")
+    if day_stops:
+        if a.mode == "real": sys.exit("REJEITADO (real): " + "; ".join(day_stops))
+        print("AVISO (treino: nao para; no real seria rejeitado): " + "; ".join(day_stops))
+        a.notes = ((a.notes + " | ") if a.notes else "") + "no real seria rejeitado: " + "; ".join(day_stops)
     todo, warn, _ = gate_eval(con)
     if todo and a.mode == "real":
         print("REJEITADO (modo real exige gate LIBERADO). Pendencias:"); [print(" -", m) for m, _h in todo]; sys.exit(1)
@@ -809,6 +820,34 @@ def cmd_facts(con, a):
         seen.add(r["key"]); print(f"{r['key']} = {r['value']}  [{r['confidence']}; {r['source']}; {r['at'][:16]}]")
     if not seen: print("nenhum fato descoberto ainda (rodar docs/descoberta.md)")
 
+def day_state(con, mode, d):
+    rows = con.execute("SELECT result_usd, size FROM trades WHERE mode=? AND closed_at LIKE ? AND result_usd IS NOT NULL ORDER BY closed_at", (mode, d + "%")).fetchall()
+    cum = peak = 0.0
+    for r in rows:
+        cum += r["result_usd"]; peak = max(peak, cum)
+    return {"pnl": cum, "peak": peak, "n": len(rows), "last_size": rows[-1]["size"] if rows else None}
+
+def daily_cfg():
+    R = load_rules(); G = R.get("goal", {})
+    return G.get("min_gain_usd", 25), G.get("max_gain_usd", 30), R.get("daily_plan", {}).get("after_goal", {}).get("giveback_floor_pct", 50)
+
+def cmd_daily(con, a):
+    n = now_brt(); d = a.date or n.strftime("%Y-%m-%d"); lo, hi, floor_pct = daily_cfg(); ds = day_state(con, a.mode, d)
+    print(f"=== META DO DIA {d} ({a.mode}) ===")
+    print(f"Meta: US$ {lo} a {hi} POR DIA, sem teto. Hoje: US$ {ds['pnl']:+.2f} em {ds['n']} trades fechados | melhor ponto do dia US$ {ds['peak']:+.2f}")
+    if ds["peak"] >= lo:
+        floor = ds["peak"] * floor_pct / 100
+        if ds["pnl"] <= floor: print(f"ESTADO: PISO DO GANHO ATINGIDO (US$ {floor:.2f}). No real: parar por hoje para nao devolver o dia.")
+        else: print(f"ESTADO: META ATINGIDA. Modo PROTEGER O CAIXA: pode seguir, mas se o resultado do dia cair a US$ {floor:.2f} ({floor_pct}% do melhor ponto), para.")
+    else:
+        print(f"ESTADO: abaixo da meta (faltam US$ {lo - ds['pnl']:.2f}). Modo NORMAL: a meta NAO muda tamanho, criterios nem frequencia. Sem gatilho, sem trade.")
+    days = con.execute("SELECT substr(closed_at,1,10) d, SUM(result_usd) s, COUNT(*) c FROM trades WHERE mode=? AND closed_at IS NOT NULL AND result_usd IS NOT NULL GROUP BY d", (a.mode,)).fetchall()
+    if days:
+        v = [r["s"] for r in days]
+        print(f"Historico ({len(v)} dias): media US$ {sum(v)/len(v):+.2f}/dia | melhor US$ {max(v):+.2f} | pior US$ {min(v):+.2f} | dias que bateram US$ {lo}: {sum(1 for x in v if x >= lo)} de {len(v)}")
+        print("Este historico e a medida real de quao alcancavel a meta diaria e; amostra pequena nao prova nada.")
+    else: print("Sem historico de dias ainda.")
+
 def cmd_stats(con, a):
     rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
     if not rows: print(f"sem trades fechados no modo {a.mode}"); return
@@ -887,6 +926,7 @@ def main():
     sd.add_argument("--cause", required=True); sd.add_argument("--confidence", required=True, choices=["alta", "media", "baixa"])
     sd.add_argument("--bias-after", required=True, choices=["alta", "baixa", "neutro"]); sd.add_argument("--note")
     sub.add_parser("ready"); sub.add_parser("goal"); sub.add_parser("facts")
+    dl = sub.add_parser("daily"); dl.add_argument("--mode", choices=["treino", "real"], default="treino"); dl.add_argument("--date")
     af = sub.add_parser("add-fact"); af.add_argument("--key", required=True); af.add_argument("--value", required=True)
     af.add_argument("--source", required=True); af.add_argument("--confidence", choices=["alta", "media", "baixa"], required=True)
     ec = sub.add_parser("entry-check")
@@ -932,7 +972,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "ready": cmd_ready, "facts": cmd_facts, "add-fact": cmd_add_fact, "goal": cmd_goal, "entry-check": cmd_entry_check, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "ready": cmd_ready, "daily": cmd_daily, "facts": cmd_facts, "add-fact": cmd_add_fact, "goal": cmd_goal, "entry-check": cmd_entry_check, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 

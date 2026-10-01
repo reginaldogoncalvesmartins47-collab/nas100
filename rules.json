@@ -454,6 +454,15 @@
         ],
         "min": 1.0,
         "max": 3.0
+      },
+      "daily_giveback_floor_pct": {
+        "path": [
+          "daily_plan",
+          "after_goal",
+          "giveback_floor_pct"
+        ],
+        "min": 25,
+        "max": 90
       }
     }
   },
@@ -539,8 +548,25 @@
     "min_gain_usd": 25,
     "max_gain_usd": 30,
     "cap": "SEM teto de ganho ('o ceu e o limite'); nao parar por ter ganho",
-    "period": "NAO informado pela usuaria (por dia? semana? mes?) - perguntar",
+    "period": "POR DIA (informado pela usuaria)",
     "note": "meta dela 'falando por cima'; 25-30 sobre US$ 30 e cerca de 83-100% da conta; nao garantido",
-    "command": "goal"
+    "command": "goal",
+    "daily": true
+  },
+  "daily_plan": {
+    "doc": "docs/meta-diaria.md",
+    "principle": "a meta diaria NAO muda tamanho, criterios nem frequencia; persegue-se escolhendo melhores trades, nunca arriscando mais",
+    "never": [
+      "aumentar o tamanho depois de perda (martingale)",
+      "entrar sem gatilho para 'fechar a meta'",
+      "afrouxar stop ou criterios para recuperar",
+      "mexer em limites de capital"
+    ],
+    "after_goal": {
+      "mode": "proteger o caixa (sem teto: pode seguir operando)",
+      "giveback_floor_pct": 50,
+      "note": "hipotese do Claude: se o dia devolver abaixo de 50% do melhor ponto depois de bater a meta, parar por hoje; no treino so avisa"
+    },
+    "data": "`daily` mostra a distribuicao real dos dias no treino (media, melhor, pior, dias que bateram a meta)"
   }
 }

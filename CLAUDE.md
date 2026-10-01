@@ -51,6 +51,10 @@ Ela opera e le rejeicao de pavio em M5. O Claude entende pelos valores de open/h
 Tempos: macro/vies H1 e H4; regioes Fibo H1 (+ refino M15); execucao e saida M5.
 Usar `path --o --h --l --c` e `wick`. Saida: alvo = regiao de oferta/demanda; acompanhar o caminho (`path`).
 
+## Meta diaria (docs/meta-diaria.md)
+Meta da usuaria: US$ 25-30 POR DIA, sem teto. Persegue-se escolhendo melhores trades, NUNCA arriscando mais: sem martingale (lote nao sobe apos perda),
+sem entrada sem gatilho, sem afrouxar stop. Apos bater a meta: proteger o caixa (piso de 50% do melhor ponto do dia). `daily` mostra o dia e o historico.
+
 ## Choque de mercado (docs/choque-de-mercado.md)
 Gap, vela enorme ou FVG => `shock` abre CHOQUE e vence o vies. PRIMEIRA tarefa, rapida (~5 min): entender o que esta
 acontecendo (`since`, noticias, pares), `shock-diagnose`, redefinir o vies (`bias --set`). So depois o resto do gate.

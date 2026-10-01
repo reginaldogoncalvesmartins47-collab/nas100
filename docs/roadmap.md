@@ -30,7 +30,8 @@
 - [x] Fase de descoberta definida (docs/descoberta.md) + texto de primeira execucao (docs/primeira-execucao.md) + add-fact/facts
 - [x] Perguntas separadas: o que o Claude descobre e o que so a usuaria sabe (docs/perguntas-abertas.md)
 - [ ] Rodar a descoberta no PC (valor do ponto, saldo, historico de trades, scripts dela, ferramentas do MCP)
-- [ ] A usuaria dizer em que PERIODO e a meta e confirmar a perda de US$ 15
+- [x] Meta diaria (US$ 25-30/dia, sem teto) com protecoes: sem martingale, piso apos a meta, `daily`
+- [ ] A usuaria confirmar a perda de US$ 15
 - [ ] A usuaria definir o risco maximo por trade antes do real (o `ready` cobra)
 - [ ] Medir o consumo de tokens no 1o dia de demo (/cost) e decidir frequencia/modelo
 - [ ] Teste de aceitacao da execucao no Paper Trading (primeiro marco no PC da usuaria)

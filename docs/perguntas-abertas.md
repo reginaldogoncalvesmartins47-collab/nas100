@@ -14,7 +14,7 @@ Resultado: `docs/descoberta-relatorio.md`. Nada disso deve ser perguntado a ela 
 
 ## So a usuaria pode responder (perguntar em lote, depois da descoberta)
 1. "Aqui eu ja paro" (caso 02): **fechar a operacao** ou **parar de operar no dia**?
-2. A meta de US$ 25-30: **por dia, semana ou mes**?
+2. (respondida: **por dia**.) Aceita o **piso de 50%** do melhor ponto do dia depois de bater a meta (proteger o caixa)?
 3. A perda total aceita: **US$ 15** (antes US$ 10)? E o **risco maximo por trade** que ela aceita (exigido antes do real).
 4. A saida em ~US$ 22-24 foi por **valor**, por **pavio** ou pela distancia da proxima regiao?
 5. Exemplos de rejeicao de pavio (candles em numeros) que ela considera boas e outras que nao, para calibrar.
