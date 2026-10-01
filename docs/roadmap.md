@@ -27,7 +27,8 @@
 - [x] Meta de ganho (US$ 25-30, sem teto) e perda aceita (~US$ 15) registradas; comando `goal`
 - [x] Caso 02 (venda na regiao de oferta, saida ~US$ 22-24) registrado
 - [x] Tamanho usual informado: 0,1 (account.usual_lot)
-- [ ] Confirmar o valor do ponto (USD por ponto por lote) e a distancia tipica dos stops dela
+- [x] Fase de descoberta definida (docs/descoberta.md) + texto de primeira execucao (docs/primeira-execucao.md) + add-fact/facts
+- [ ] Rodar a descoberta no PC (valor do ponto, saldo, historico de trades, scripts dela, ferramentas do MCP)
 - [ ] A usuaria dizer em que PERIODO e a meta e confirmar a perda de US$ 15
 - [ ] A usuaria definir o risco maximo por trade antes do real (o `ready` cobra)
 - [ ] Medir o consumo de tokens no 1o dia de demo (/cost) e decidir frequencia/modelo

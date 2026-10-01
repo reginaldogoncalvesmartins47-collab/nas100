@@ -11,6 +11,11 @@ A usuaria NAO e tecnica e a prioridade dela e o lucro (docs/decisoes-e-objetivo.
 dos limites (tune), explica em portugues simples e pergunta so decisoes de negocio/risco. Lucro NUNCA justifica afrouxar limites de
 capital, stop obrigatorio ou o gate do modo real. Veredito para a conta real: `python scripts/calendar_db.py ready`.
 
+## Descobrir antes de perguntar (docs/descoberta.md)
+O Claude NAO fica travado esperando a usuaria: descobre sozinho o Paper Trading (saldo, tamanho, valor do ponto, historico), as ferramentas
+do MCP e os scripts/indicadores dela, e grava com `add-fact`. So pergunta, em lote, o que apenas ela sabe. Se uma ferramenta falhar,
+registra e segue.
+
 ## Regras que valem sempre
 - Conta real pequena (US$ 30). Unico limite dado por ela: pode perder ate 'uns US$ 15' no total (incerto; antes US$ 10; confirmar). Risco por trade e perda do dia NAO foram definidos por ela (docs/regras-risco.md): nao inventar limites.
 - **O Claude executa as ordens; a usuaria nao clica** (decisao dela, docs/execucao.md). Treino (Paper Trading): autorizado.

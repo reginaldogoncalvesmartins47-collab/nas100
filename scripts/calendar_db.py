@@ -26,6 +26,8 @@ Comandos:
   shock-diagnose --id N --category C --cause TXT --confidence alta|media|baixa --bias-after alta|baixa|neutro   diagnostico rapido do choque
   entry-check --zone-type demanda|oferta --zone-low L --zone-high H --o O --h H --l L --c C --atr A [--score S --bias B --target-low --target-high --risk-usd --usd-per-point --min-lot]
                                     GATILHO de entrada em M5: toque na regiao + rejeicao de pavio a favor + fechou sem romper; calcula stop, alvo, RR e lote
+  add-fact --key K --value V --source S --confidence alta|media|baixa   grava algo DESCOBERTO (chaves de conta atualizam rules.json)
+  facts                             o que ja foi descoberto
   goal                              meta de ganho x limite de perda: quantos trades/stops no ritmo atual (treino)
   ready                             veredito em portugues simples: ja da para ir para a conta real? (criterios do treino)
   stats [--mode treino|real]        acerto, R medio, MFE, quanto devolveu, por motivo de saida e por estado do gate
@@ -116,6 +118,9 @@ CREATE TABLE IF NOT EXISTS shocks (
   id INTEGER PRIMARY KEY, detected_at TEXT NOT NULL, kinds TEXT NOT NULL, gap_pts REAL, gap_atr REAL, range_atr REAL,
   direction TEXT, fvg_low REAL, fvg_high REAL, fvg_dir TEXT, status TEXT DEFAULT 'aberto',
   category TEXT, cause TEXT, confidence TEXT, diagnosed_at TEXT, notes TEXT
+);
+CREATE TABLE IF NOT EXISTS facts (
+  id INTEGER PRIMARY KEY, at TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, source TEXT NOT NULL, confidence TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS reactions (
   event_id INTEGER PRIMARY KEY REFERENCES events(id),
@@ -782,6 +787,28 @@ def cmd_goal(con, a):
     if avg_loss < 0: print(f"Perda media por trade perdedor: US$ {avg_loss:.2f} -> ~{int(kill / abs(avg_loss)) + 1} stops seguidos chegariam ao limite de US$ {kill}.")
     print("Sem garantia: a media muda com mais dados. Tamanho do lote/risco por trade e a alavanca que liga a meta ao limite de perda.")
 
+ACCOUNT_KEYS = {"usd_per_point_per_lot", "min_lot", "usual_lot", "paper_balance_usd", "leverage", "margin_per_lot_usd"}
+
+def cmd_add_fact(con, a):
+    con.execute("INSERT INTO facts(at,key,value,source,confidence) VALUES(?,?,?,?,?)",
+                (now_brt().isoformat(timespec="seconds"), a.key, a.value, a.source, a.confidence))
+    con.commit(); msg = f"fato gravado: {a.key} = {a.value} (fonte: {a.source}, confianca {a.confidence})"
+    if a.key in ACCOUNT_KEYS:
+        try: v = float(str(a.value).replace(",", "."))
+        except ValueError: print(msg + " | nao numerico: nao atualizei rules.json"); return
+        if a.confidence == "baixa": print(msg + " | confianca baixa: NAO atualizei rules.json (confirmar antes)"); return
+        R = load_rules(); R.setdefault("account", {})[a.key] = v
+        json.dump(R, open(rules_path(), "w", encoding="utf-8"), ensure_ascii=False, indent=2)
+        msg += " | rules.json > account atualizado"
+    print(msg)
+
+def cmd_facts(con, a):
+    rows = con.execute("SELECT * FROM facts ORDER BY at DESC, id DESC").fetchall(); seen = set()
+    for r in rows:
+        if r["key"] in seen: continue
+        seen.add(r["key"]); print(f"{r['key']} = {r['value']}  [{r['confidence']}; {r['source']}; {r['at'][:16]}]")
+    if not seen: print("nenhum fato descoberto ainda (rodar docs/descoberta.md)")
+
 def cmd_stats(con, a):
     rows = con.execute("SELECT * FROM trades WHERE closed_at IS NOT NULL AND mode=?", (a.mode,)).fetchall()
     if not rows: print(f"sem trades fechados no modo {a.mode}"); return
@@ -859,7 +886,9 @@ def main():
     sd.add_argument("--category", required=True, choices=["petroleo", "geopolitica", "ia_tech", "fed_juros", "dados", "resultado", "liquidez_tecnica", "desconhecida"])
     sd.add_argument("--cause", required=True); sd.add_argument("--confidence", required=True, choices=["alta", "media", "baixa"])
     sd.add_argument("--bias-after", required=True, choices=["alta", "baixa", "neutro"]); sd.add_argument("--note")
-    sub.add_parser("ready"); sub.add_parser("goal")
+    sub.add_parser("ready"); sub.add_parser("goal"); sub.add_parser("facts")
+    af = sub.add_parser("add-fact"); af.add_argument("--key", required=True); af.add_argument("--value", required=True)
+    af.add_argument("--source", required=True); af.add_argument("--confidence", choices=["alta", "media", "baixa"], required=True)
     ec = sub.add_parser("entry-check")
     ec.add_argument("--zone-type", choices=["demanda", "oferta"], required=True)
     for k in ("zone-low", "zone-high", "o", "h", "l", "c", "atr"): ec.add_argument("--" + k, type=float, required=True)
@@ -903,7 +932,7 @@ def main():
             for k in ("m5", "m15", "m60"): s.add_argument("--" + k, type=float)
     a = p.parse_args(); con = connect(a.db)
     {"init": lambda c, x: print("banco pronto:", os.path.abspath(a.db)), "upsert": cmd_upsert, "today": cmd_today,
-     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "ready": cmd_ready, "goal": cmd_goal, "entry-check": cmd_entry_check, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
+     "window": cmd_window, "themes": cmd_themes, "open-trade": cmd_open_trade, "update-trade": cmd_update_trade, "close-trade": cmd_close_trade, "stats": cmd_stats, "ready": cmd_ready, "facts": cmd_facts, "add-fact": cmd_add_fact, "goal": cmd_goal, "entry-check": cmd_entry_check, "bias": cmd_bias, "shock": cmd_shock, "shock-diagnose": cmd_shock_diagnose, "tune": cmd_tune, "tune-history": cmd_tune_history, "tune-revert": cmd_tune_revert, "path": cmd_path, "wick": cmd_wick, "gate": cmd_gate, "since": cmd_since, "add-sentiment": cmd_add_sentiment, "renew-read": cmd_renew_read, "add-read": cmd_add_read, "reads": cmd_reads, "mark-checked": cmd_mark_checked, "brief": cmd_brief, "upsert-holidays": cmd_upsert_holidays,
      "upsert-extra": cmd_upsert_extra, "add-plan": cmd_add_plan, "close-plan": cmd_close_plan, "upsert-news": cmd_upsert_news, "news": cmd_news,
      "set-actual": cmd_set_actual, "add-reaction": cmd_add_reaction}[a.cmd](con, a)
 
