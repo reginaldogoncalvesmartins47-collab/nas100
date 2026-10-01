@@ -2,7 +2,7 @@
   "_status": "RASCUNHO: numeros tecnicos sao hipoteses a calibrar com dados. O Claude executa as ordens (treino no Paper Trading; real so com ready + autorizacao unica da usuaria). Tudo que a usuaria decidiu esta em docs/decisoes-alinhadas.md.",
   "instrument": "PEPPERSTONE:NAS100",
   "days": "seg-sex",
-  "bias_source": "usuario (macro do dia: Brent, juros, ES, calendario, geopolitica)",
+  "bias_source": "claude (analise fundamentalista: Brent, juros, DXY, ES, VIX, big techs, calendario, noticias, geopolitica, sentimento); usuaria pode revisar",
   "regions": {
     "tf_primary": "H1",
     "tf_refine": "M15",

@@ -2,7 +2,7 @@
 
 Fonte: descricao da usuaria na conversa. Resumo geral de tudo que foi decidido: docs/decisoes-alinhadas.md.
 
-## 1. Direcao macro (vies do dia) - decidida pelo usuario
+## 1. Direcao macro (vies do dia) - decidida pelo Claude (fundamentalista), revisavel pela usuaria
 Motores do NAS no dia a dia:
 - Brent: em baixa tende a favorecer alta do NAS; em alta pressiona.
 - Juros (US10Y): juros subindo pressionam o NAS; caindo favorecem.

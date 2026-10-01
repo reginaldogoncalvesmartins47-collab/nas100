@@ -27,7 +27,7 @@ registra e segue.
 - Nao tocar em abas de corretora/banco ao usar o navegador.
 
 ## Metodo (resumo, detalhes em `docs/metodo.md`)
-- Direcao macro vem do usuario (painel proprio e leitura de Brent, juros, ES, calendario, geopolitica).
+- Direcao macro (vies) e do Claude: analista fundamentalista do NAS100. Constroi o vies sozinho (Brent, juros, DXY, ES, VIX, big techs, calendario, noticias, geopolitica, sentimento), justifica em portugues simples e diz "sem vies/sem trade" quando nao houver. A usuaria pode revisar; o painel dela e uma fonte a mais.
 - Entrada: regiao pontuada (liquidez + Fibo H1 + oferta/demanda) e o GATILHO e o mercado em M5: o preco chega na regiao, mostra
   rejeicao de pavio a favor do vies e o candle fecha sem romper a regiao (`entry-check`). Esperar o candle FECHAR; nao antecipar.
 - Sem janela de horario fixa: o sistema trabalha enquanto a usuaria o mantiver ligado (mercado aberto). Acompanhar o limite de uso do plano.
