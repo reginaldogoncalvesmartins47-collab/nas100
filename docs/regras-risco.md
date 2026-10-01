@@ -34,8 +34,12 @@ Motivo: na demo o dinheiro e ficticio e parar cedo interromperia a coleta de dad
 ## Backtest no TradingView
 Para validar a logica (nao a conta): modo teste ligado, capital 1000. Comparar em R, nao em dolares.
 
-## Pendencia importante: tamanho real das posicoes (inferido do caso 02)
-No print do caso 02 a posicao aparece como **-1** (venda de 1) com **+US$ 24,30**. Se 1 = uma unidade do NAS100 a US$ 1 por ponto,
-**um stop de 20 pontos custaria ~US$ 20**, quase a conta inteira de US$ 30, e a margem de 1 unidade seria muito maior que a conta.
-Isso indica que o **Paper Trading da usuaria pode estar com saldo bem maior que US$ 30** (o padrao costuma ser alto; nao confirmado).
-Se for isso, os resultados de demo **nao representam** a conta de US$ 30. **Confirmar:** tamanho usado, saldo do Paper Trading e valor do ponto.
+## Tamanho das posicoes (informado pela usuaria)
+- Tamanho usual: **0,1** (o grafico mostra "1"). Registrado em `rules.json` > `account.usual_lot`.
+- **Valor do ponto a confirmar** (`account.usd_per_point_per_lot`). Suposicao de trabalho: US$ 1 por ponto por lote.
+  Com a suposicao, **0,1 lote**: 20 pontos = US$ 2 | 50 = US$ 5 | 100 = US$ 10 | 150 = US$ 15 (igual ao limite de perda total).
+  O +US$ 24,30 do caso 02 equivaleria a ~243 pontos de movimento.
+- Como confirmar: com uma posicao aberta, anotar preco de entrada, preco atual e o lucro; divide-se o lucro pelos pontos e pelo lote.
+- O `entry-check` usa o tamanho usual e mostra o risco REAL de cada stop e quanto ele pesa no limite de perda total.
+- Se os stops baseados em pavio de M5 forem de dezenas de pontos, o risco por trade e de poucos dolares; se forem de centenas
+  (escala de swing), 1-2 stops chegam ao limite de US$ 15. So os trades reais mostram a escala.

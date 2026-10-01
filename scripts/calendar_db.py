@@ -748,17 +748,20 @@ def cmd_entry_check(con, a):
         if rr < min_rr: flags.append(f"RR {rr:.2f} abaixo do minimo {min_rr}")
         tgt_txt = f" --target1 {near} --zone-low {a.target_low} --zone-high {a.target_high}"
     else: flags.append("sem regiao-alvo informada: definir antes de entrar")
-    per = risk_cfg()[0]
-    if a.usd_per_point:
-        if a.risk_usd is None: size = a.min_lot
-        else: raw = a.risk_usd / (dist * a.usd_per_point); size = max(a.min_lot, round(raw / a.min_lot) * a.min_lot)
-        real_risk = size * dist * a.usd_per_point
-        print(f"  tamanho: {size:.2f} lote(s) | risco REAL nesse stop: US$ {real_risk:.2f}" + (f" (alvo de risco US$ {a.risk_usd})" if a.risk_usd is not None else " (lote minimo; o stop e definido pelo mercado, nao pelo dinheiro)"))
+    per = risk_cfg()[0]; acc = R.get("account", {})
+    upp = a.usd_per_point or acc.get("usd_per_point_per_lot"); lot_cfg = a.lot or acc.get("usual_lot")
+    if upp:
+        if a.risk_usd is not None: size = max(a.min_lot, round(a.risk_usd / (dist * upp) / a.min_lot) * a.min_lot)
+        else: size = lot_cfg or a.min_lot
+        real_risk = size * dist * upp
+        print(f"  tamanho: {size:g} lote(s) | risco REAL nesse stop: US$ {real_risk:.2f}" + (f" (alvo de risco US$ {a.risk_usd})" if a.risk_usd is not None else " (tamanho usual; o stop e definido pelo mercado, nao pelo dinheiro)"))
         if a.risk_usd is not None and real_risk > a.risk_usd * 1.05: flags.append(f"o lote minimo faz o risco real (US$ {real_risk:.2f}) passar do alvo (US$ {a.risk_usd})")
         if per is not None and real_risk > per: flags.append(f"risco real acima do maximo definido pela usuaria (US$ {per})")
-        size_txt = f" --size {size:.2f} --risk-usd {real_risk:.2f}"
+        kill = risk_cfg()[2]
+        if real_risk >= 0.5 * kill: flags.append(f"este stop sozinho custa US$ {real_risk:.2f}, {100 * real_risk / kill:.0f}% do limite de perda total (US$ {kill})")
+        size_txt = f" --size {size:g} --risk-usd {real_risk:.2f}"
     else:
-        flags.append("sem --usd-per-point nao da para calcular o risco real; informar o valor do ponto na Pepperstone")
+        flags.append("sem o valor do ponto (USD por ponto, 1 lote) nao da para calcular o risco real; confirmar na Pepperstone")
         size_txt = f" --risk-usd {a.risk_usd if a.risk_usd is not None else 'CALCULAR'}"
     for f in flags: print("  aviso:", f)
     print(f"  registrar: open-trade --mode treino --side {side} --entry {entry} --stop {stop:.1f}{tgt_txt}{size_txt} --region-score {a.score} --bias {bias}")
@@ -863,7 +866,7 @@ def main():
     ec.add_argument("--score", type=float); ec.add_argument("--bias", choices=["alta", "baixa", "neutro"])
     ec.add_argument("--target-low", type=float); ec.add_argument("--target-high", type=float)
     ec.add_argument("--risk-usd", type=float, default=None); ec.add_argument("--usd-per-point", type=float, help="USD por ponto para 1 lote (confirmar na Pepperstone)")
-    ec.add_argument("--min-lot", type=float, default=0.01)
+    ec.add_argument("--min-lot", type=float, default=0.01); ec.add_argument("--lot", type=float, help="tamanho a usar (padrao: account.usual_lot)")
     st = sub.add_parser("stats"); st.add_argument("--mode", choices=["treino", "real"], default="treino")
     sub.add_parser("themes"); sub.add_parser("gate"); sub.add_parser("since")
     sm = sub.add_parser("add-sentiment"); sm.add_argument("--source", required=True); sm.add_argument("--metric", required=True)

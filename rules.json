@@ -511,7 +511,10 @@
   },
   "account": {
     "capital_usd": 30,
-    "_nota": "conta de US$ 30 (decisao da usuaria). Perda total aceita: 'uns US$ 15' (incerto)."
+    "_nota": "conta de US$ 30 (decisao da usuaria). Perda total aceita: 'uns US$ 15' (incerto).",
+    "usual_lot": 0.1,
+    "usd_per_point_per_lot": null,
+    "_tamanho": "tamanho usual informado pela usuaria: 0,1 (o grafico mostra '1'). usd_per_point_per_lot A CONFIRMAR: ela pode medir pela posicao (entrada, preco atual e lucro). Suposicao de trabalho nos exemplos: US$ 1 por ponto por lote."
   },
   "cost_control": {
     "doc": "docs/custo-tokens.md",
