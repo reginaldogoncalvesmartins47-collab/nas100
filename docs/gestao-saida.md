@@ -83,3 +83,29 @@ A) stop e alvo fixos; B) break-even em +1R; C) parcial de 50% em +1R + trailing;
 - Demo nao simula spread/slippage reais; os numeros do real serao piores.
 - MFE depende de o Claude atualizar o trade com a maxima/minima; se faltar checagem, o MFE fica subestimado.
 - Quem executa e o Claude (docs/execucao.md); robo na corretora e uma opcao a decidir depois, se o resultado na demo for positivo.
+
+## REGRA DE PROTECAO DO LUCRO E "CENARIO ANTES DE MUDAR" (usuaria, 01/10/2026)
+Objetivo: nao devolver o que ja ganhamos (ex.: ISM devolveu 50% em minutos). Numeros abaixo sao HIPOTESES do Claude, a revisar com o placar (docs/reacao-noticias.md); nunca afrouxar stop, nunca aumentar lote.
+
+**1) Antes de QUALQUER mudanca (mexer no stop, parcial, sair): analisar o cenario geral e registrar a decisao com o motivo.** Checklist de 5 itens:
+ 1. Juros (US10Y): subindo ou caindo na ultima hora?  2. Brent: idem.  3. Noticias/falas dos ultimos 30 min (ai_news, Finviz) e o que disseram.  4. Proximo evento do calendario: quantos minutos faltam, e qual o vies dele.  5. Estrutura: onde esta a proxima liquidez/Fibo/POC no caminho do alvo e do stop.  (+ placar/vies registrado.)
+ Se o cenario FAVORECE a continuacao: so proteger (item 2). Se virou CONTRA a tese (ex.: venda e juros caindo + fala mole): sair a mercado sem esperar o stop.
+
+**2) Degraus de protecao (posicao a favor, distancia ate o alvo = D):**
+ - >= 50% de D (ou +60 pts): stop para o ZERO A ZERO (preco de entrada).
+ - >= 75% de D: stop para travar ~40% do ganho aberto.
+ - Nunca mover o stop para longe; so aproximar. Alvo no corretor continua.
+
+**3) Pre-noticia (T-5 do proximo evento, com posicao no lucro):** se o lucro >= ~30 pts e o cenario nao esta claramente a favor => stop no zero a zero (ou fecha, se o vies do proximo evento for o OPOSTO da posicao: fecha e inverte, regra do calendario). Se o cenario e a favor e o alvo esta perto, deixa.
+
+**4) Fim da janela de gestao (~25 min apos o evento):** sem reacao nova de noticia, deixa o stop/alvo resolverem; registrar MFE e quanto devolveu.
+
+**5) Alvo proximo + velas fortes a favor (sugestao da usuaria, 01/10/2026):** pode-se esticar o alvo e travar lucro com stop POSITIVO.
+ - Ordem obrigatoria: (a) analisar o cenario geral (checklist do item 1); (b) PRIMEIRO subir o stop para posicao positiva (trava >= ~50% do ganho aberto, nunca menos que o zero a zero); (c) SO ENTAO estender o alvo ate o proximo obstaculo real (liquidez/Fibo/POC). Nunca esticar o alvo sem antes travar o stop; nunca afastar o stop.
+ - "Velas fortes" (hipotese): >= 2 velas M5 seguidas a favor, corpo >= 1,5x a media das ultimas 20, fechando perto da extremidade, sem pavio de rejeicao contra. Volume de CFD = ticks: pesar corpo e fechamento.
+ - NAO estender se: alvo colado em liquidez forte (POC, maxima/minima do dia), noticia nos proximos minutos (ai vale protecao, nao extensao), ou vela de exaustao (pavio longo) perto do alvo.
+ - Custo aceito: o stop positivo pode ser batido antes do alvo antigo.
+
+**6) ALVO MAIOR (usuaria, 01/10/2026: "aumentar o take"):** em trade de noticia, o alvo nao e o nivel mais proximo, e o PROXIMO NIVEL RELEVANTE (Fibo/POC/liquidez em H1) ou, no minimo, 1,5x o risco do stop. Para alvo maior valer a pena, compensa com protecao: degraus do item 2 (zero a zero a +50% do caminho, travar ~40% a +75%) e item 5 (stop positivo antes de esticar). O custo e aceito: a taxa de acerto do alvo cheio cai; por isso o placar registra MFE (quanto andou a favor) e quanto devolveu, para calibrar o tamanho do alvo com dados (ver ~20 eventos).
+
+**7) FECHAR ANTES DAS 18:00 (usuaria, 01/10/2026):** toda posicao fecha as 17:55 (relogio do TradingView), a mercado, antes do fechamento das 18:00. Vale para qualquer trade, no lucro ou no prejuizo. O mercado reabre as 19:00 (Asia abre as 21:00): entradas depois das 19:00, como o Logan 19:45, estao liberadas.

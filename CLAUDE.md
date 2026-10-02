@@ -2,6 +2,11 @@
 
 Contexto para o Claude Code. Leia `docs/` antes de agir.
 
+## >>> RETOMADA: LEIA PRIMEIRO (sessao nova nao lembra da conversa; tudo importante esta NA PASTA) <<<
+1. `docs/estado-e-retomada.md` = estado atual, o que a usuaria decidiu em 01/10/2026, rotina diaria, agenda a recriar, armadilhas das ferramentas, pendencias.
+2. Estrategia atual = SO NOTICIAS (calendario) em demo, com painel de contexto no grafico e briefing de mesa agendado. Regras: secoes "CALENDARIO: REGRA INQUEBRAVEL", "ROTINA DIARIA DO CALENDARIO", "PROTOCOLO DE TEMA", "PROTECAO DO LUCRO", "FECHAR ANTES DAS 18H" e "VIES VIVO" mais abaixo; detalhes em `docs/calendario-regra-e-coleta.md`, `docs/playbook-noticias.md`, `docs/gestao-saida.md`, `docs/briefing-horario.md`, `docs/enciclopedia-noticias.md`, `docs/analise-dia-2026-10-01.md`.
+3. Onde houver conflito entre texto antigo (rules.json, docs de 'regioes/gatilho M5', 'treino nao trava por gate') e estas secoes novas, VALEM AS NOVAS (a usuaria quer auditoria das regras: ver pendencias).
+
 ## Objetivo
 Tudo o que a usuaria decidiu esta em `docs/decisoes-alinhadas.md` (leia primeiro).
 Ajudar o usuario a operar o NAS100 (PEPPERSTONE:NAS100): ler o grafico no TradingView, analisar cenario
@@ -42,7 +47,11 @@ incremental (`since`). Leitura de par sem mudanca: `renew-read`. Antes de evento
 Nunca perseguir a manchete. Nao usar noticia fora da janela. Nao aplicar correlacao mecanica.
 
 ## Modos e saida
-- Treino (demo): NAO trava por gate, nota, perda do dia nem corte total (estes so avisam e registram 'no real teria parado'). Vale sempre: stop obrigatorio (definido pelo mercado, nao pelo dinheiro).
+- **GATE OBRIGATORIO EM TODA SESSAO, INCLUSIVE NA DEMO (decisao da usuaria, 30/09/2026):** nao abrir ordem sem `gate` = LIBERADO.
+  Verificar tudo primeiro (checklist acima); so depois analisar com liberdade, como gestor grande de operacoes especializado em NAS100
+  (pode operar os dois lados, recuo dentro da tendencia, alvo no proximo suporte/liquidez). Isso substitui o antigo "treino nao trava por gate".
+  Ordem so pelo ticket completo (Shift+T) com stop e alvo antes de confirmar (docs: add-fact `order_procedure_correct`).
+- Treino (demo): nota, perda do dia e corte total so avisam e registram 'no real teria parado'. Vale sempre: stop obrigatorio (definido pelo mercado, nao pelo dinheiro). Tamanho 0,1.
 - Real: so depois de resultado positivo em amostra grande; gate LIBERADO obrigatorio.
 - Todo trade: stop obrigatorio, plano de saida definido antes (docs/gestao-saida.md), registrado em `trades` (MFE, devolvido).
 - Stop e alvo ficam como ordens no broker; o Claude ajusta nas checagens, nunca substitui o stop.
@@ -67,6 +76,9 @@ Trades abertos: revisar stop/protecao imediatamente. Sem limite de numero de tra
 O Claude pode ajustar parametros de hipotese com `tune` (evidencia minima, um por vez, historico, revert; real exige aprovacao
 da usuaria). NUNCA ajustar limites de capital, stop obrigatorio, gate do modo real, regras de data/fonte/janela das noticias.
 
+## Diario (obrigatorio)
+A cada trade aberto/fechado e ao fim do dia: `journal/diario_trades.csv` (saldo antes/depois, ganho, perda, status) + `journal/resumo-diario.md` (saldo inicial, ganhou, perdeu, saldo final) + `open-trade`/`close-trade` no banco. Pedido da usuaria em 30/09/2026.
+
 ## Arquivos
 - `pine/` scripts Pine (TradingView). `nas100_liquidez_v2.pine` e o atual; nao testado ate o momento.
 - `docs/` metodo, liquidez e regioes, fluxo de analise, risco, setup do MCP, roadmap.
@@ -75,3 +87,40 @@ da usuaria). NUNCA ajustar limites de capital, stop obrigatorio, gate do modo re
 
 ## Estado
 Ver `docs/roadmap.md`.
+
+## CALENDARIO: REGRA INQUEBRAVEL (usuaria, 01/10/2026)
+- TODA noticia do calendario (todas as estrelas, discursos do Fed, leiloes, balanco do Fed, payroll, tudo) recebe uma ENTRADA A MERCADO 5 MIN ANTES, no lado do vies, com stop e alvo no ticket. Excecao UNICA: ja existe posicao ativa no MESMO lado (ai so gerir). Se o vies virou, fecha a oposta e entra.
+- CADA NOTICIA TEM ANALISE PROPRIA, mesmo no mesmo horario (usuaria, 01/10/2026: "agrupar por horario NAO pode acontecer"). Para CADA linha do calendario: abrir a PAGINA DO EVENTO no Investing (historico atual/projecao/anterior), protocolo de tema, vies proprio e registro proprio no placar. Execucao: uma posicao por lado; se os vies do mesmo horario concordam, e uma ordem so (ja ha ordem ativa); se divergem, decidir pelo evento de maior peso/estrelas e registrar a divergencia. Falha em coletar o calendario = falha minha, nao desculpa.
+- Rotina de MANHA (antes de qualquer analise): (1) ler a tabela COMPLETA do Investing via javascript_tool (todas as linhas, estrelas pelos icones, projecao/anterior; ver memoria reference-investing-calendario-js); (2) gravar no banco; (3) CronCreate de UMA entrada em T-5 para cada horario distinto; (4) conferir CronList contra a tabela e dizer a usuaria a lista dos horarios agendados.
+- No horario: a entrada ocorre; se NAO foi aberta ordem (erro de interface, sem sessao), AVISAR na hora que falhou e por que, nunca em silencio.
+- Verificacao a cada entrada: screenshot do Paper Trading mostrando a posicao com TP/SL.
+- Ao fim do dia: lista de eventos x entradas feitas x faltantes, no resumo-diario.md.
+- Detalhes e codigo da coleta: docs/calendario-regra-e-coleta.md (leia antes de coletar o calendario).
+
+## PROTECAO DO LUCRO (usuaria, 01/10/2026)
+Trade no lucro nao pode virar prejuizo por descuido: degraus (zero a zero a >=50% do alvo; travar ~40% a >=75%), pre-noticia com lucro >= ~30 pts => proteger/inverter. ANTES de qualquer mudanca (stop, parcial, saida) analisar o cenario geral (juros, Brent, noticias 30 min, proximo evento, estrutura) e registrar o motivo. Detalhes: docs/gestao-saida.md. Nunca afastar stop nem aumentar lote.
+
+## PROTOCOLO DE TEMA ANTES DO VIES (usuaria, 01/10/2026)
+Prever e entrar antecipado (T-5) SIM, mas o vies so depois de: (1) descobrir o TEMA do evento; (2) quando esse tema foi abordado pela ultima vez; (3) como o mercado se comportou; (4) o que mudou desde entao; (5) vies+confianca+invalidacao com fontes. Tema fora de juros/inflacao/emprego => vies neutro. Detalhes: docs/playbook-noticias.md. Nunca presumir "hawkish de manual".
+
+## ROTINA DIARIA DO CALENDARIO (usuaria, 01/10/2026) - ver docs/calendario-regra-e-coleta.md
+Todo dia: Investing -> salvar todos os eventos do NAS100 com horario -> TABELA DO DIA (hora, evento, estrelas, atual, projecao, anterior, link do historico) -> pesquisar o historico e analisar o vies (alta/baixa) de CADA noticia. 1 estrela: checar a direcao macro 1D do NAS100 e se a noticia a potencializa. 2/3 estrelas: sentimento geral com confluencia de juros, Brent, ES e NQ.
+
+## FECHAR ANTES DAS 18H (usuaria, 01/10/2026)
+O mercado fecha as 18:00 (BRT). SEMPRE fechar toda posicao aberta as 17:55 (relogio do TradingView; o relogio do PC fica ~2-7 min atras), a mercado, pelo painel Paper Trading, e registrar close-trade/journal/resumo. Nao deixar posicao aberta na pausa/fechamento. Pausa das 18:00 ate a REABERTURA as 19:00 (BRT); abertura da Asia as 21:00. Entradas de eventos depois das 19:00 (ex.: Logan 19:45) estao liberadas: o mercado ja esta operando.
+
+## VIES VIVO (usuaria, 01/10/2026)
+O painel e contexto, nao lei: nao insistir no lado antigo quando a estrutura muda, mas so inverter com evidencia combinada (>= 2 de 4: quebra de estrutura M15 ou 2 fechamentos alem de nivel-chave; confluencia virada em 2 leituras seguidas; conteudo da noticia contradiz; preco aceita alem do nivel), nunca por 1 vela. Todo trade nasce com invalidacao escrita; viés > 30 min sem reavaliar e vencido. Rotulos do painel sao atrasados: vale a dinamica, registrando o motivo. Detalhes: docs/playbook-noticias.md.
+
+## BRIEFING DE MESA E PAINEL (usuaria, 01/10/2026)
+- Roteiro oficial (prompt dela, adaptado): docs/briefing-horario.md. Rodar 06:17, 08:25 e de hora em hora na sessao de NY (10:27 a 16:27 no relogio do PC). DIRECAO OBRIGATORIA ALTA/QUEDA ("neutro" so com justificativa plausivel, mesmo assim indicando o lado de menor risco), SEM pontas soltas (condicao -> acao -> invalidacao -> alvo; decisao para os proximos 30-60 min). Registrar em journal/briefings/AAAA-MM-DD.md.
+- **FONTE REGULAR DE NOTICIAS: Seeking Alpha** (usuaria, 01/10/2026): a cada briefing, a cada checagem de posicao aberta e apos eventos do calendario, WebFetch `https://seekingalpha.com/market-news` (manchetes recentes + hora ET; ET = BRT - 1h). Ela cobre o que o painel nao ve a noite (petroleo, geopolitica, falas do Fed). Manchete pode sair 20-45 min apos o evento; tom/numero conferir em 2a fonte. Ver docs/briefing-horario.md.
+- Painel no grafico: indicador "Painel NAS100 Compacto" (ler com data_get_pine_tables, study_filter "Painel"). Sensor, nao gatilho. Estado/pendencias/armadilhas das ferramentas e agendamentos a recriar: docs/estado-e-retomada.md.
+
+## SESSOES E NIVEIS (usuaria, 01/10/2026) - ver docs/sessoes-e-niveis.md
+O Claude SABE os horarios (BRT/TV): Asia 21:00-03:00, Londres 03:00-10:30, NY 10:30-17:00 (AM 10:30-13:00, almoco 13:00-14:30, PM 14:30-17:00), pausa 18:00-19:00. Calcula SOZINHO (data_get_ohlcv M5) a maxima/minima de cada sessao e se foi VARRIDA (pavio passou do nivel apos a sessao) ou ABERTA; varrida = descartada, aberta = alvo/ponto de operacao; observar a sequencia das varreduras. O painel NAO precisa calcular isso (v3.11 no TradingView; a v3.12 do arquivo pine/ nao foi publicada).
+
+## JANELA DE ENTRADA (usuaria, 01/10/2026)
+Viés definido + ordem a mercado: observar ~10 min (T-10 ate T-2/T-3 do TV) o MELHOR PONTO; com vela atual contra o viés, esperar a regiao e a rejeicao em vez de entrar na forca contraria; no prazo, entrar de qualquer forma com o stop estrutural. Detalhes: docs/playbook-noticias.md.
+
+Correcao da JANELA DE ENTRADA: prazo em horario do TRADINGVIEW (T-5 = entrada forcada), ticket pre-aberto a partir de T-7, toda resposta diz a hora exata da entrada forcada. Ver docs/playbook-noticias.md.

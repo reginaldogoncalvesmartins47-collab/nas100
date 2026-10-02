@@ -1,0 +1,397 @@
+// ATENCAO (01/10/2026 22:30): ESTA E A v3.12, NAO TESTADA/NAO PUBLICADA. No TradingView roda a v3.11 (sem status varrida/aberta). A usuaria decidiu que o Claude calcula as sessoes (docs/sessoes-e-niveis.md); nao reenviar este arquivo sem pedido.
+//@version=5
+// Painel de CONTEXTO NAS100 v3.12 (maxima/minima das sessoes COM status varrida/aberta + alvos abertos + ultima varredura; sem CRT D1 e sem prox evento; seta pelo sinal; 15m + vs abertura nos 6 mercados, 1h so no calculo; ES atrasado trocado por S&P CFD tempo real; base v3.5: compacto + gigantes + Micron + SENTIMENTO CALCULADO). NAO gera sinal. Sensor para a analise do Claude (leitura: data_get_pine_tables).
+// Mapa de regioes + ontem/EMA20 + sessoes + confluencia + regime + ATR + relogio TV (BRT).
+// No TradingView: script salvo como "Painel Noticias NAS100 1"; titulo no grafico "Painel NAS100 Compacto".
+indicator("Painel NAS100 Compacto", overlay=true)
+
+sy_us10 = input.symbol("TVC:US10Y", "Juros 10a")
+sy_brent = input.symbol("TVC:UKOIL", "Brent")
+sy_es = input.symbol("PEPPERSTONE:US500", "S&P CFD (tempo real)")
+sy_nq = input.symbol("CME_MINI:NQ1!", "NQ (atraso ~10 min)")
+sy_vix = input.symbol("TVC:VIX", "VIX")
+sy_dxy = input.symbol("TVC:DXY", "DXY")
+lot = input.float(0.1, "Lote (US$ por ponto = lote x 1,0)")
+evtStr = input.string("19:45", "Eventos de hoje, BRT (HH:MM separados por virgula)")
+posIn = input.string("Inferior direita", "Posicao do painel", options=["Inferior direita", "Inferior esquerda", "Superior esquerda", "Superior direita"])
+szIn = input.string("Pequeno", "Tamanho do texto", options=["Minusculo", "Pequeno", "Normal"])
+// cesta de gigantes (pesos APROXIMADOS no NDX; ajustar nas configuracoes)
+sy_g1 = input.symbol("NASDAQ:NVDA", "Gigante 1", group="Gigantes")
+sy_g2 = input.symbol("NASDAQ:MSFT", "Gigante 2", group="Gigantes")
+sy_g3 = input.symbol("NASDAQ:AAPL", "Gigante 3", group="Gigantes")
+sy_g4 = input.symbol("NASDAQ:AMZN", "Gigante 4", group="Gigantes")
+sy_g5 = input.symbol("NASDAQ:GOOGL", "Gigante 5", group="Gigantes")
+sy_g6 = input.symbol("NASDAQ:AVGO", "Gigante 6", group="Gigantes")
+sy_g7 = input.symbol("NASDAQ:META", "Gigante 7", group="Gigantes")
+sy_g8 = input.symbol("NASDAQ:TSLA", "Gigante 8", group="Gigantes")
+sy_semi = input.symbol("NASDAQ:SMH", "Semicondutores (ETF)", group="Gigantes")
+sy_mu = input.symbol("NASDAQ:MU", "Micron (termometro IA/memoria)", group="Gigantes")
+w1 = input.float(10.0, "Peso 1 %", group="Gigantes")
+w2 = input.float(8.0, "Peso 2 %", group="Gigantes")
+w3 = input.float(8.0, "Peso 3 %", group="Gigantes")
+w4 = input.float(5.0, "Peso 4 %", group="Gigantes")
+w5 = input.float(5.0, "Peso 5 %", group="Gigantes")
+w6 = input.float(5.0, "Peso 6 %", group="Gigantes")
+w7 = input.float(4.0, "Peso 7 %", group="Gigantes")
+w8 = input.float(3.0, "Peso 8 %", group="Gigantes")
+tz = "America/Sao_Paulo"
+
+f_dop() => ta.valuewhen(ta.change(time("D")) != 0, open, 0)
+[u15, u60, ut, ud0] = request.security(sy_us10, "5", [(close - close[3]) * 100, (close - close[12]) * 100, time, (close - f_dop()) * 100])
+[b15, b60, bt, bd0] = request.security(sy_brent, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time, (close / f_dop() - 1) * 100])
+[e15, e60, et, ed0] = request.security(sy_es, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time, (close / f_dop() - 1) * 100])
+[n15, n60, nt, nd0] = request.security(sy_nq, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time, (close / f_dop() - 1) * 100])
+[v15, v60, vt, vd0] = request.security(sy_vix, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time, (close / f_dop() - 1) * 100])
+[d15, d60, dt, dd0] = request.security(sy_dxy, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time, (close / f_dop() - 1) * 100])
+f_alive(t) => (timenow - t) <= 20 * 60000
+aU = f_alive(ut)
+aB = f_alive(bt)
+aE = f_alive(et)
+aN = f_alive(nt)
+aV = f_alive(vt)
+aD = f_alive(dt)
+
+// gigantes: uma chamada por ativo devolve 15m e 1h
+[g1a, g1b, g1t] = request.security(sy_g1, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time])
+[g2a, g2b] = request.security(sy_g2, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g3a, g3b] = request.security(sy_g3, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g4a, g4b] = request.security(sy_g4, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g5a, g5b] = request.security(sy_g5, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g6a, g6b] = request.security(sy_g6, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g7a, g7b] = request.security(sy_g7, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g8a, g8b] = request.security(sy_g8, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[sma, smb] = request.security(sy_semi, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[mua, mub, mut] = request.security(sy_mu, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time])
+aG = f_alive(g1t)
+aM = f_alive(mut)
+
+wsum = w1 + w2 + w3 + w4 + w5 + w6 + w7 + w8
+gw15 = (nz(g1a) * w1 + nz(g2a) * w2 + nz(g3a) * w3 + nz(g4a) * w4 + nz(g5a) * w5 + nz(g6a) * w6 + nz(g7a) * w7 + nz(g8a) * w8) / wsum
+gw60 = (nz(g1b) * w1 + nz(g2b) * w2 + nz(g3b) * w3 + nz(g4b) * w4 + nz(g5b) * w5 + nz(g6b) * w6 + nz(g7b) * w7 + nz(g8b) * w8) / wsum
+gup15 = (g1a > 0 ? 1 : 0) + (g2a > 0 ? 1 : 0) + (g3a > 0 ? 1 : 0) + (g4a > 0 ? 1 : 0) + (g5a > 0 ? 1 : 0) + (g6a > 0 ? 1 : 0) + (g7a > 0 ? 1 : 0) + (g8a > 0 ? 1 : 0)
+gup60 = (g1b > 0 ? 1 : 0) + (g2b > 0 ? 1 : 0) + (g3b > 0 ? 1 : 0) + (g4b > 0 ? 1 : 0) + (g5b > 0 ? 1 : 0) + (g6b > 0 ? 1 : 0) + (g7b > 0 ? 1 : 0) + (g8b > 0 ? 1 : 0)
+
+f_sc(v, th, inv) =>
+    r = v > th ? 1 : v < -th ? -1 : 0
+    inv ? -r : r
+f_ar(v, th) => v > 0 ? "▲" : v < 0 ? "▼" : "▬"  // seta = SINAL; a cor (f_sc) indica se passou do limite
+f_sg(x) => (x > 0 ? "+" : "") + str.tostring(x, "0.0")
+f_sg0(x) => (x > 0 ? "+" : "") + str.tostring(x, "0")
+
+f_l(a, x) => a ? x : 0
+s15 = f_l(aU, f_sc(u15, 1.5, true)) + f_l(aB, f_sc(b15, 0.3, true)) + f_l(aE, f_sc(e15, 0.08, false)) + f_l(aN, f_sc(n15, 0.10, false)) + f_l(aV, f_sc(v15, 1.0, true)) + f_l(aD, f_sc(d15, 0.05, true))
+s60 = f_l(aU, f_sc(u60, 4.0, true)) + f_l(aB, f_sc(b60, 0.6, true)) + f_l(aE, f_sc(e60, 0.20, false)) + f_l(aN, f_sc(n60, 0.25, false)) + f_l(aV, f_sc(v60, 2.5, true)) + f_l(aD, f_sc(d60, 0.12, true))
+
+f_reg() =>
+    ph = ta.pivothigh(high, 2, 2)
+    pl = ta.pivotlow(low, 2, 2)
+    h1 = ta.valuewhen(not na(ph), ph, 0)
+    h2 = ta.valuewhen(not na(ph), ph, 1)
+    l1 = ta.valuewhen(not na(pl), pl, 0)
+    l2 = ta.valuewhen(not na(pl), pl, 1)
+    up = h1 > h2 and l1 > l2
+    dn = h1 < h2 and l1 < l2
+    [up ? 1 : dn ? -1 : 0, h1, l1]
+
+[reg15, h15, l15] = request.security(syminfo.tickerid, "15", f_reg())
+[reg60, h60, l60] = request.security(syminfo.tickerid, "60", f_reg())
+
+pdh = request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on)
+pdl = request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on)
+pdo = request.security(syminfo.tickerid, "D", open[1], lookahead=barmerge.lookahead_on)
+pdc = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
+dOpen = request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on)
+dHigh = request.security(syminfo.tickerid, "D", high)
+dLow = request.security(syminfo.tickerid, "D", low)
+ema20d = request.security(syminfo.tickerid, "D", ta.ema(close, 20))
+atr5 = ta.atr(14)
+atr15 = request.security(syminfo.tickerid, "15", ta.atr(14))
+
+pdBull = pdc > pdo
+pdMid = (pdh + pdl) / 2
+pdRange = pdh - pdl
+pd79 = pdBull ? pdl + 0.21 * pdRange : pdl + 0.79 * pdRange
+
+newNY = ta.change(time("D", "0000-2400", "America/New_York")) != 0
+var float nyOpen = na
+if newNY
+    nyOpen := open
+
+utcH = hour(time, "UTC")
+utcM = minute(time, "UTC")
+inAsia = utcH < 6
+inLon = utcH >= 6 and (utcH < 13 or (utcH == 13 and utcM < 30))
+inNYAM = (utcH == 13 and utcM >= 30) or (utcH >= 14 and utcH < 16)
+inNYL = utcH >= 16 and (utcH < 17 or (utcH == 17 and utcM < 30))
+inNYPM = (utcH == 17 and utcM >= 30) or (utcH >= 18 and utcH < 20)
+sessTxt = inAsia ? "ASIA" : inLon ? "LONDRES" : inNYAM ? "NY AM" : inNYL ? "NY LUNCH" : inNYPM ? "NY PM" : "FORA"
+var float asiaOpen = na
+var float asiaEnd = na
+var float lonOpen = na
+var float lonEnd = na
+if inAsia and not inAsia[1]
+    asiaOpen := open
+if inAsia
+    asiaEnd := close
+if inLon and not inLon[1]
+    lonOpen := open
+if inLon
+    lonEnd := close
+
+// ---- maximas/minimas das sessoes com status VARRIDA/ABERTA (sessoes completas em UTC: Asia 00-06 = 21-03 BRT; Londres 06-13:30 = 03-10:30 BRT; NY 13:30-20 = 10:30-17 BRT) ----
+// varrida = depois que a sessao acabou, o preco passou do nivel (pavio). Mantem a ultima sessao concluida e a anterior.
+inNY = (utcH == 13 and utcM >= 30) or (utcH >= 14 and utcH < 20)
+f_sess(inS) =>
+    var float h = na
+    var float l = na
+    var bool sh = false
+    var bool sl = false
+    var float h2 = na
+    var float l2 = na
+    var bool sh2 = false
+    var bool sl2 = false
+    flipH = false
+    flipL = false
+    if inS
+        if not inS[1] or na(h)
+            h2 := h
+            l2 := l
+            sh2 := sh
+            sl2 := sl
+            h := high
+            l := low
+            sh := false
+            sl := false
+        else
+            h := math.max(h, high)
+            l := math.min(l, low)
+    else
+        if not na(h)
+            if not sh and high > h
+                sh := true
+                flipH := true
+            if not sl and low < l
+                sl := true
+                flipL := true
+    if not na(h2)
+        if not sh2 and high > h2
+            sh2 := true
+        if not sl2 and low < l2
+            sl2 := true
+    [h, l, sh, sl, h2, l2, sh2, sl2, flipH, flipL]
+
+[aH, aL, aSH, aSL, aH2, aL2, aSH2, aSL2, aFH, aFL] = f_sess(inAsia)
+[lH, lL, lSH, lSL, lH2, lL2, lSH2, lSL2, lFH, lFL] = f_sess(inLon)
+[nH, nL, nSH, nSL, nH2, nL2, nSH2, nSL2, nFH, nFL] = f_sess(inNY)
+var string lsN = "—"
+var int lsT = na
+if aFH
+    lsN := "Asia H"
+    lsT := time
+if aFL
+    lsN := "Asia L"
+    lsT := time
+if lFH
+    lsN := "Londres H"
+    lsT := time
+if lFL
+    lsN := "Londres L"
+    lsT := time
+if nFH
+    lsN := "NY H"
+    lsT := time
+if nFL
+    lsN := "NY L"
+    lsT := time
+
+if barstate.islast
+    line.new(bar_index - 50, pdh, bar_index + 5, pdh, color=color.new(color.red, 30), style=line.style_dashed)
+    line.new(bar_index - 50, pdl, bar_index + 5, pdl, color=color.new(color.green, 30), style=line.style_dashed)
+
+nowMin = hour(timenow, tz) * 60 + minute(timenow, tz)
+closeIn = 17 * 60 + 55 - nowMin
+
+tpos = posIn == "Inferior direita" ? position.bottom_right : posIn == "Inferior esquerda" ? position.bottom_left : posIn == "Superior esquerda" ? position.top_left : position.top_right
+tsz = szIn == "Minusculo" ? size.tiny : szIn == "Normal" ? size.normal : size.small
+f_lv(h, sw) => na(h) ? "—" : str.tostring(h, "0") + (sw ? " varrida" : " (" + f_sg0(h - close) + ") ABERTA")
+f_lc(h, sw, isH) => na(h) ? color.gray : sw ? color.gray : isH ? color.orange : color.aqua
+var tbl = table.new(tpos, 3, 39, bgcolor=color.new(color.black, 20), border_width=0)
+f_put(r, c, txt, col) => table.cell(tbl, c, r, txt, text_color=col, text_size=tsz, text_halign=text.align_left)
+f_pc(r, c, a, txt, col) => f_put(r, c, a ? txt : "parado", a ? col : color.gray)
+f_colr(sc) => sc > 0 ? color.lime : sc < 0 ? color.red : color.silver
+f_rg(x) => x > 0 ? "ALTA" : x < 0 ? "BAIXA" : "LATERAL"
+f_lvl(r, nm, px) =>
+    if na(px)
+        f_put(r, 0, nm + " —", color.silver)
+    else
+        d = px - close
+        f_put(r, 0, nm + " " + str.tostring(px, "0.0"), color.white)
+        f_put(r, 1, f_sg(d), d > 0 ? color.orange : color.aqua)
+        f_put(r, 2, "$" + f_sg(d * lot), color.silver)
+
+if barstate.islast
+    f_put(0, 0, "NAS100 CONTEXTO", color.yellow)
+    f_put(0, 1, "15m", color.yellow)
+    f_put(0, 2, "vs abert", color.yellow)
+    f_put(1, 0, "Juros10 pb", color.white)
+    f_pc(1, 1, aU, f_ar(u15, 1.5) + f_sg(u15), f_colr(f_sc(u15, 1.5, true)))
+    f_pc(1, 2, aU, f_ar(ud0, 3.0) + f_sg(ud0), f_colr(f_sc(ud0, 3.0, true)))
+    f_put(2, 0, "Brent %", color.white)
+    f_pc(2, 1, aB, f_ar(b15, 0.3) + str.tostring(b15, "0.00"), f_colr(f_sc(b15, 0.3, true)))
+    f_pc(2, 2, aB, f_ar(bd0, 0.5) + str.tostring(bd0, "0.00"), f_colr(f_sc(bd0, 0.5, true)))
+    f_put(3, 0, "S&P CFD %", color.white)
+    f_pc(3, 1, aE, f_ar(e15, 0.08) + str.tostring(e15, "0.00"), f_colr(f_sc(e15, 0.08, false)))
+    f_pc(3, 2, aE, f_ar(ed0, 0.15) + str.tostring(ed0, "0.00"), f_colr(f_sc(ed0, 0.15, false)))
+    f_put(4, 0, "NQ %", color.white)
+    f_pc(4, 1, aN, f_ar(n15, 0.1) + str.tostring(n15, "0.00"), f_colr(f_sc(n15, 0.1, false)))
+    f_pc(4, 2, aN, f_ar(nd0, 0.15) + str.tostring(nd0, "0.00"), f_colr(f_sc(nd0, 0.15, false)))
+    f_put(5, 0, "VIX %", color.white)
+    f_pc(5, 1, aV, f_ar(v15, 1.0) + str.tostring(v15, "0.0"), f_colr(f_sc(v15, 1.0, true)))
+    f_pc(5, 2, aV, f_ar(vd0, 3.0) + str.tostring(vd0, "0.0"), f_colr(f_sc(vd0, 3.0, true)))
+    f_put(6, 0, "DXY %", color.white)
+    f_pc(6, 1, aD, f_ar(d15, 0.05) + str.tostring(d15, "0.000"), f_colr(f_sc(d15, 0.05, true)))
+    f_pc(6, 2, aD, f_ar(dd0, 0.15) + str.tostring(dd0, "0.000"), f_colr(f_sc(dd0, 0.15, true)))
+    verd = s60 >= 3 ? "ALTA" : s60 <= -3 ? "BAIXA" : "MISTO"
+    f_put(7, 0, "Confluencia", color.white)
+    f_put(7, 1, f_sg0(s15), f_colr(s15))
+    f_put(7, 2, f_sg0(s60) + " " + verd, f_colr(s60))
+    f_put(8, 0, "Regime M15 | H1", color.white)
+    f_put(8, 1, f_rg(reg15), f_colr(reg15))
+    f_put(8, 2, f_rg(reg60), f_colr(reg60))
+    vsOpen = close - dOpen
+    f_put(9, 0, "vs abertura dia", color.white)
+    f_put(9, 1, f_sg(vsOpen), f_colr(vsOpen))
+    f_put(9, 2, "$" + f_sg(vsOpen * lot), color.silver)
+    f_lvl(10, "PDH", pdh)
+    f_lvl(11, "MEIO", pdMid)
+    f_lvl(12, "OTE", pd79)
+    f_lvl(13, "NY00", nyOpen)
+    f_lvl(14, "PDL", pdl)
+    upD = 99999.0
+    dnD = 99999.0
+    upN = "—"
+    dnN = "—"
+    names = array.from("PDH", "MEIO", "OTE", "NY00", "PDL")
+    vals = array.from(pdh, pdMid, pd79, nyOpen, pdl)
+    for i = 0 to 4
+        v = array.get(vals, i)
+        if not na(v)
+            dd = v - close
+            if dd > 0 and dd < upD
+                upD := dd
+                upN := array.get(names, i)
+            if dd < 0 and -dd < dnD
+                dnD := -dd
+                dnN := array.get(names, i)
+    f_put(15, 0, "Prox acima | abaixo", color.white)
+    f_put(15, 1, upN + (upD < 99999.0 ? " +" + str.tostring(upD, "0") : ""), color.orange)
+    f_put(15, 2, dnN + (dnD < 99999.0 ? " -" + str.tostring(dnD, "0") : ""), color.aqua)
+    f_put(16, 0, "Ontem | EMA20 D1", color.white)
+    f_put(16, 1, pdBull ? "ALTA" : "BAIXA", pdBull ? color.lime : color.red)
+    f_put(16, 2, close > ema20d ? "acima" : "abaixo", close > ema20d ? color.lime : color.red)
+    f_put(18, 0, "Sessao | Asia | Lond", color.white)
+    f_put(18, 1, sessTxt, color.white)
+    asiaT = na(asiaOpen) ? "A —" : "A" + f_sg0(asiaEnd - asiaOpen)
+    lonT = na(lonOpen) ? "L —" : "L" + f_sg0(lonEnd - lonOpen)
+    f_put(18, 2, asiaT + " " + lonT, color.silver)
+    f_put(19, 0, "Dia H | L", color.white)
+    f_put(19, 1, str.tostring(dHigh, "0.0"), color.silver)
+    f_put(19, 2, str.tostring(dLow, "0.0"), color.silver)
+    f_put(20, 0, "ATR M5 | M15", color.white)
+    f_put(20, 1, str.tostring(atr5, "0.0"), color.silver)
+    f_put(20, 2, str.tostring(atr15, "0.0"), color.silver)
+    f_put(21, 0, "Hora TV", color.white)
+    f_put(21, 1, str.format_time(timenow, "HH:mm:ss", tz), color.white)
+    f_put(22, 0, "Fechar 17:55", color.white)
+    f_put(22, 1, closeIn > 0 ? str.tostring(closeIn) + " min" : "PASSOU", closeIn <= 10 and closeIn > 0 ? color.orange : color.silver)
+    // ---- cesta de gigantes ----
+    f_put(23, 0, "GIGANTES pond. 15m|1h", color.yellow)
+    f_pc(23, 1, aG, f_ar(gw15, 0.10) + str.tostring(gw15, "0.00"), f_colr(f_sc(gw15, 0.10, false)))
+    f_pc(23, 2, aG, f_ar(gw60, 0.25) + str.tostring(gw60, "0.00"), f_colr(f_sc(gw60, 0.25, false)))
+    f_put(24, 0, "Sobem de 8 (15m|1h)", color.white)
+    f_pc(24, 1, aG, str.tostring(gup15), gup15 >= 6 ? color.lime : gup15 <= 2 ? color.red : color.silver)
+    f_pc(24, 2, aG, str.tostring(gup60), gup60 >= 6 ? color.lime : gup60 <= 2 ? color.red : color.silver)
+    f_put(25, 0, "NVDA MSFT AAPL AMZN", color.white)
+    f_pc(25, 1, aG, f_ar(g1a, 0.05) + f_ar(g2a, 0.05) + f_ar(g3a, 0.05) + f_ar(g4a, 0.05), color.silver)
+    f_pc(25, 2, aG, f_ar(g1b, 0.1) + f_ar(g2b, 0.1) + f_ar(g3b, 0.1) + f_ar(g4b, 0.1), color.silver)
+    f_put(26, 0, "GOOGL AVGO META TSLA", color.white)
+    f_pc(26, 1, aG, f_ar(g5a, 0.05) + f_ar(g6a, 0.05) + f_ar(g7a, 0.05) + f_ar(g8a, 0.05), color.silver)
+    f_pc(26, 2, aG, f_ar(g5b, 0.1) + f_ar(g6b, 0.1) + f_ar(g7b, 0.1) + f_ar(g8b, 0.1), color.silver)
+    f_put(27, 0, "Semis SMH 15m|1h", color.white)
+    f_pc(27, 1, aG, f_ar(sma, 0.10) + str.tostring(sma, "0.00"), f_colr(f_sc(sma, 0.10, false)))
+    f_pc(27, 2, aG, f_ar(smb, 0.25) + str.tostring(smb, "0.00"), f_colr(f_sc(smb, 0.25, false)))
+    f_put(28, 0, "Micron MU 15m|1h", color.white)
+    f_pc(28, 1, aM, f_ar(mua, 0.15) + str.tostring(mua, "0.00"), f_colr(f_sc(mua, 0.15, false)))
+    f_pc(28, 2, aM, f_ar(mub, 0.40) + str.tostring(mub, "0.00"), f_colr(f_sc(mub, 0.40, false)))
+    // ---- sentimento CALCULADO (soma de sinais ao vivo; pesos iguais, NAO validado) ----
+    cS = math.max(-2, math.min(2, s60)) + reg60 + reg15 + (pdBull ? 1 : -1) + (close > ema20d ? 1 : -1) + (close > pdMid ? 1 : -1) + (aG ? (gw60 > 0.25 ? 1 : gw60 < -0.25 ? -1 : 0) : 0)
+    live = (aU ? 1 : 0) + (aB ? 1 : 0) + (aE ? 1 : 0) + (aN ? 1 : 0) + (aV ? 1 : 0) + (aD ? 1 : 0) + (aG ? 1 : 0)
+    sLab = cS >= 3 ? "ALTA" : cS <= -3 ? "QUEDA" : cS > 0 ? "MISTO (inclina ALTA)" : cS < 0 ? "MISTO (inclina QUEDA)" : "MISTO (sem lado)"
+    f_put(29, 0, "SENTIMENTO CALCULADO", color.yellow)
+    f_put(29, 1, sLab, f_colr(cS))
+    f_put(29, 2, str.tostring(math.round(math.abs(cS) / 8.0 * 10)) + "/10", color.white)
+    f_put(30, 0, "Dados vivos | score", color.white)
+    f_put(30, 1, str.tostring(live) + " de 7", live <= 3 ? color.orange : color.silver)
+    f_put(30, 2, f_sg0(cS) + " de 8", color.silver)
+    // ---- niveis das sessoes: so os ABERTOS (nao varridos) viram alvo ou ponto de operacao ----
+    f_put(17, 0, "Asia H | L", color.white)
+    f_put(17, 1, f_lv(aH, aSH), f_lc(aH, aSH, true))
+    f_put(17, 2, f_lv(aL, aSL), f_lc(aL, aSL, false))
+    f_put(31, 0, "Londres H | L", color.white)
+    f_put(31, 1, f_lv(lH, lSH), f_lc(lH, lSH, true))
+    f_put(31, 2, f_lv(lL, lSL), f_lc(lL, lSL, false))
+    f_put(32, 0, "NY H | L", color.white)
+    f_put(32, 1, f_lv(nH, nSH), f_lc(nH, nSH, true))
+    f_put(32, 2, f_lv(nL, nSL), f_lc(nL, nSL, false))
+    f_put(33, 0, "Asia ant. H | L", color.gray)
+    f_put(33, 1, f_lv(aH2, aSH2), f_lc(aH2, aSH2, true))
+    f_put(33, 2, f_lv(aL2, aSL2), f_lc(aL2, aSL2, false))
+    f_put(34, 0, "Londres ant. H | L", color.gray)
+    f_put(34, 1, f_lv(lH2, lSH2), f_lc(lH2, lSH2, true))
+    f_put(34, 2, f_lv(lL2, lSL2), f_lc(lL2, lSL2, false))
+    f_put(35, 0, "NY ant. H | L", color.gray)
+    f_put(35, 1, f_lv(nH2, nSH2), f_lc(nH2, nSH2, true))
+    f_put(35, 2, f_lv(nL2, nSL2), f_lc(nL2, nSL2, false))
+    f_put(36, 0, "Ultima varredura", color.white)
+    f_put(36, 1, lsN, color.yellow)
+    f_put(36, 2, na(lsT) ? "—" : str.format_time(lsT, "HH:mm", tz) + " TV", color.silver)
+    // alvo aberto mais proximo (acima: maximas nao varridas; abaixo: minimas nao varridas) e zona de confluencia
+    hArr = array.from(aH, lH, nH, aH2, lH2, nH2, pdh)
+    hSw = array.from(aSH, lSH, nSH, aSH2, lSH2, nSH2, dHigh > pdh)
+    lArr = array.from(aL, lL, nL, aL2, lL2, nL2, pdl)
+    lSw = array.from(aSL, lSL, nSL, aSL2, lSL2, nSL2, dLow < pdl)
+    hNm = array.from("Asia H", "Londres H", "NY H", "Asia ant. H", "Londres ant. H", "NY ant. H", "PDH")
+    lNm = array.from("Asia L", "Londres L", "NY L", "Asia ant. L", "Londres ant. L", "NY ant. L", "PDL")
+    tol = math.max(10.0, 0.4 * atr15)
+    upT = 99999.0
+    dnT = 99999.0
+    upS = "—"
+    dnS = "—"
+    zD = 99999.0
+    zTxt = "nenhum nivel aberto perto"
+    zCol = color.gray
+    for j = 0 to 6
+        xh = array.get(hArr, j)
+        if not na(xh) and not array.get(hSw, j)
+            if xh > close and xh - close < upT
+                upT := xh - close
+                upS := array.get(hNm, j) + " " + str.tostring(xh, "0") + " (+" + str.tostring(xh - close, "0") + ")"
+            if math.abs(close - xh) <= tol and math.abs(close - xh) < zD
+                zD := math.abs(close - xh)
+                zTxt := "ZONA DE VENDA: " + array.get(hNm, j) + " (" + f_sg0(xh - close) + ")"
+                zCol := color.red
+        xl = array.get(lArr, j)
+        if not na(xl) and not array.get(lSw, j)
+            if xl < close and close - xl < dnT
+                dnT := close - xl
+                dnS := array.get(lNm, j) + " " + str.tostring(xl, "0") + " (-" + str.tostring(close - xl, "0") + ")"
+            if math.abs(close - xl) <= tol and math.abs(close - xl) < zD
+                zD := math.abs(close - xl)
+                zTxt := "ZONA DE COMPRA: " + array.get(lNm, j) + " (" + f_sg0(xl - close) + ")"
+                zCol := color.lime
+    f_put(37, 0, "Alvo aberto acima | abaixo", color.white)
+    f_put(37, 1, upS, color.orange)
+    f_put(37, 2, dnS, color.aqua)
+    f_put(38, 0, "Confluencia de nivel", color.yellow)
+    f_put(38, 1, zTxt, zCol)
+    f_put(38, 2, "tol " + str.tostring(tol, "0") + " pts", color.silver)
