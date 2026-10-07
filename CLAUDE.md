@@ -2,6 +2,8 @@
 
 Contexto para o Claude Code. Leia `docs/` antes de agir.
 
+## >>> AO INICIAR QUALQUER SESSAO (obrigatorio, sem a usuaria pedir): (1) conferir o MCP tradingview (tv_health_check; se falhar, reabrir o TradingView com a porta 9222: docs/estado-e-retomada.md secao 12); (2) CronList e criar os agendamentos de `docs/agendamentos.md` (GEX automatico, briefing, fechamento; eventos depois do calendario); (3) dizer a usuaria a lista criada. Os crons somem quando o Claude fecha: em outro PC ou sessao nova eles NAO existem ate serem recriados. <<<
+
 ## >>> MOTOR DE DECISAO (07/10/2026): `docs/motor-de-decisao.md` define O QUE o Claude opera (eventos/noticias; sem evento bom = painel + setup de regioes; sem ORB; sem limite de trades; Passo 0 = leitura do momento). Vale acima de textos antigos sobre setups. <<<
 
 ## >>> RETOMADA: LEIA PRIMEIRO (sessao nova nao lembra da conversa; tudo importante esta NA PASTA) <<<
