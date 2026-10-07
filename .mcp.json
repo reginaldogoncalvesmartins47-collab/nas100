@@ -3,6 +3,10 @@
     "tradingview": {
       "command": "node",
       "args": ["C:/Users/User/tradingview-mcp/src/server.js"]
+    },
+    "luxalgo": {
+      "type": "http",
+      "url": "https://mcp.luxalgo.com/mcp"
     }
   }
 }
