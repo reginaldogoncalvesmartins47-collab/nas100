@@ -1,0 +1,84 @@
+//@version=6
+indicator("VWAPs NY / Dia / Extremo", "VWAPs", overlay = true, max_labels_count = 10)
+
+// 3 VWAPs com ancoragem automatica (fuso de Nova York):
+//  NY      = abertura de NY 09:30 ET (10:30 BRT)
+//  Dia     = meia-noite de NY 00:00 ET (01:00 BRT)
+//  Extremo = minima (ou maxima) do dia de NY; reinicia a cada nova minima/maxima
+// Bandas = desvio padrao ponderado pelo volume. Volume do CFD = tick volume (referencia, nao numero exato).
+
+const string TZ = "America/New_York"
+mode  = input.string("Minima do dia", "Ancora do VWAP Extremo", options = ["Minima do dia", "Maxima do dia"])
+mult1 = input.float(1.0, "Banda 1 (desvios)", minval = 0.1, step = 0.1)
+mult2 = input.float(2.0, "Banda 2 (desvios)", minval = 0.1, step = 0.1)
+showNY  = input.bool(true, "VWAP NY")
+showDay = input.bool(true, "VWAP Dia")
+showExt = input.bool(true, "VWAP Extremo")
+showB1  = input.bool(true, "Mostrar banda 1")
+showB2  = input.bool(false, "Mostrar banda 2")
+
+float src = hlc3
+float vol = volume > 0 ? volume : 1.0
+
+int dayKey = year(time, TZ) * 10000 + month(time, TZ) * 100 + dayofmonth(time, TZ)
+bool newDay = dayKey != nz(dayKey[1])
+int nyMin = hour(time, TZ) * 60 + minute(time, TZ)
+bool nyStart = nyMin >= 570 and (nz(nyMin[1]) < 570 or newDay)
+
+var float dayLow = na
+var float dayHigh = na
+bool resetLow  = newDay or na(dayLow) or low < dayLow
+bool resetHigh = newDay or na(dayHigh) or high > dayHigh
+dayLow  := newDay or na(dayLow) ? low : math.min(dayLow, low)
+dayHigh := newDay or na(dayHigh) ? high : math.max(dayHigh, high)
+bool resetExt = mode == "Minima do dia" ? resetLow : resetHigh
+
+vw(bool reset) =>
+    var float sv = 0.0
+    var float spv = 0.0
+    var float spv2 = 0.0
+    if reset
+        sv := 0.0
+        spv := 0.0
+        spv2 := 0.0
+    sv += vol
+    spv += src * vol
+    spv2 += src * src * vol
+    float m = spv / sv
+    [m, math.sqrt(math.max(spv2 / sv - m * m, 0.0))]
+
+[mNY, sNY]   = vw(nyStart)
+[mD, sD]     = vw(newDay)
+[mE, sE]     = vw(resetExt)
+
+color cNY = #2962ff
+color cD  = #9c27b0
+color cE  = #089981
+
+plot(showNY ? mNY : na, "VWAP NY", cNY, 2, plot.style_linebr)
+plot(showNY and showB1 ? mNY + sNY * mult1 : na, "NY +1", color.new(cNY, 40), 1, plot.style_linebr)
+plot(showNY and showB1 ? mNY - sNY * mult1 : na, "NY -1", color.new(cNY, 40), 1, plot.style_linebr)
+plot(showNY and showB2 ? mNY + sNY * mult2 : na, "NY +2", color.new(cNY, 65), 1, plot.style_circles)
+plot(showNY and showB2 ? mNY - sNY * mult2 : na, "NY -2", color.new(cNY, 65), 1, plot.style_circles)
+
+plot(showDay ? mD : na, "VWAP Dia", cD, 2, plot.style_linebr)
+plot(showDay and showB1 ? mD + sD * mult1 : na, "Dia +1", color.new(cD, 40), 1, plot.style_linebr)
+plot(showDay and showB1 ? mD - sD * mult1 : na, "Dia -1", color.new(cD, 40), 1, plot.style_linebr)
+plot(showDay and showB2 ? mD + sD * mult2 : na, "Dia +2", color.new(cD, 65), 1, plot.style_circles)
+plot(showDay and showB2 ? mD - sD * mult2 : na, "Dia -2", color.new(cD, 65), 1, plot.style_circles)
+
+plot(showExt ? mE : na, "VWAP Extremo", cE, 2, plot.style_linebr)
+plot(showExt and showB1 ? mE + sE * mult1 : na, "Ext +1", color.new(cE, 40), 1, plot.style_linebr)
+plot(showExt and showB1 ? mE - sE * mult1 : na, "Ext -1", color.new(cE, 40), 1, plot.style_linebr)
+plot(showExt and showB2 ? mE + sE * mult2 : na, "Ext +2", color.new(cE, 65), 1, plot.style_circles)
+plot(showExt and showB2 ? mE - sE * mult2 : na, "Ext -2", color.new(cE, 65), 1, plot.style_circles)
+
+// rotulos com o valor, so na ultima barra
+var label lNY = na
+var label lD = na
+var label lE = na
+if barstate.islast
+    label.delete(lNY), label.delete(lD), label.delete(lE)
+    lNY := showNY  ? label.new(bar_index + 2, mNY, "NY " + str.tostring(mNY, "#.#"), style = label.style_label_left, color = color.new(cNY, 20), textcolor = color.white, size = size.small) : na
+    lD  := showDay ? label.new(bar_index + 2, mD, "Dia " + str.tostring(mD, "#.#"), style = label.style_label_left, color = color.new(cD, 20), textcolor = color.white, size = size.small) : na
+    lE  := showExt ? label.new(bar_index + 2, mE, "Ext " + str.tostring(mE, "#.#"), style = label.style_label_left, color = color.new(cE, 20), textcolor = color.white, size = size.small) : na

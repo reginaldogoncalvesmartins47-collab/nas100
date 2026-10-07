@@ -107,3 +107,25 @@ LICAO: usar a PAGINA DO EVENTO no Investing (link de cada noticia, com historico
 ### 17:30 - analise INDIVIDUAL (01/10/2026), cada noticia separada
 1) Balanco Patrimonial do Fed (3*): historico acima (variacao semanal media 8,5B, max 15B). Vies: neutro, sem edge, confianca muito baixa.
 2) Saldos de reservas dos bancos no Fed (1*): ultima leitura 2,930T (-83,6B na semana de 23/09; -72B em 1 ano). Causa MECANICA: a Conta Geral do Tesouro (TGA) subiu +100B na semana (pagamento de impostos/emissao), o que drena reservas sem decisao do Fed. Semana de 30/09 = fim de trimestre (balancos/repo/TGA podem mexer); queda por TGA e ruido tecnico, nao sinal de aperto. Vies: neutro; so seria relevante se as reservas caissem muito abaixo de ~2,8T (estresse de funding). Obs.: a pagina do evento de reservas nao pude abrir (extensao do Chrome desconectada as 17:10).
+
+## 11. PARAMETRO: Baker Hughes (sondas de petroleo e total EUA), sexta 14:00 BRT, 2 estrelas - definido em 02/10/2026 com a usuaria
+Origem: observacao DELA no M5 em 11/09, 18/09 e 25/09 ("todas que vi"): **leve alta, range pequeno, movimentacao de ~10-20 min**. Amostra pequena (3); hipotese a testar com `add-reaction` a cada sexta.
+- **Direcao:** leve ALTA no NAS100 (confianca 3/10; so vale se o macro nao for contra: juros subindo forte invalida).
+- **Tamanho esperado:** ~30-50 pts. Nao esticar o take.
+- **Duracao:** 10-20 min. **Saida por tempo ~20 min apos o dado** se o alvo nao bateu.
+- **Stop:** fora do range MICRO (o range de ~1h antes do dado), nao do range do dia. Risco aceito mesmo com R:R ~0,5 porque a vantagem e a probabilidade do padrao.
+- **Protecao:** +20 a +25 pts => stop no zero a zero.
+- **Registrar:** NAS100 no horario do dado e +5/+15/+60 min (`add-reaction`) e anotar leitura vs. previsao do rig count.
+- Hoje: 14:00 oleo 455 (ant), total 599 (ant). Entrada em T-5 (13:55 TV).
+
+### 11b. Pesquisa (02/10/2026 ~13:30 TV): por que o range e pequeno nas 14:00 e o que esperar do CFTC 16:30
+- Baker Hughes sai 13:00 ET = 14:00 BRT = DENTRO da janela de almoco de NY (~11:30-13:30 ET): volume cai, ranges comprimem, rompimentos travam, mean-reversion/chop (fontes de blog: tradingsim, test-max, edgeful; nao ha estudo academico intradiario sobre rig count x acoes: pesquisei e nao achei). Hipotese: o range pequeno que a usuaria viu e mais efeito do HORARIO (almoco) do que do dado. Rig count afeta o NAS100 so indiretamente (petroleo -> inflacao -> juros).
+- CFTC sai 15:30 ET = 16:30 BRT, dado de TERCA (3 dias de atraso): contexto, nao gatilho. Esse horario cai na tarde de sexta: fluxo de quem zera posicao antes do fim de semana pode puxar o preco contra a tendencia do dia sem noticia (fonte: tradingsim). Range de sexta/quinta e o maior da semana no NQ (edgeful).
+- Aplicacao: 14:00 = alvo curto, mean-reversion, sem esticar; 16:30 = cuidado com devolucao/zeragem; fechar 17:55.
+
+## 12. GEX (gamma dos dealers) - fonte: pasta ANALISTA-MACRO (scraper/gex.py), achada em 02/10/2026
+- Fonte: CBOE Delayed Quotes (endpoint publico, sem chave) das opcoes do QQQ (proxy do Nasdaq-100; NDX nao tem cadeia nessa API). Calculo: GEX = spot^2 x gamma x OI x 100 x 0,01, calls +, puts -, janela de 30 dias. Rodar: `cd Desktop/ANALISTA-MACRO/scraper && python -c "import gex; print(gex.calcular_gex())"`. So CONTEXTO, nunca gatilho (decisao da propria pasta).
+- Leitura 02/10 13:46 TV: QQQ 749,69; regime POSITIVO (dealers amortecem volatilidade); flip 750; muro de call 750; muro de put 725; P/C 1,86. Conversao p/ NAS100 CFD (fator = NAS100/QQQ ~41,1): flip e muro de call ~30.855; muro de put ~29.830 (longe).
+- Leitura: preco colado no flip/muro de call = "pinning" de sexta (vencimento semanal), ranges comprimidos. Sustenta mean-reversion e alvos curtos hoje. Limites: convencao dealers long call/short put (nao e fato), QQQ != NAS100 CFD, vencimentos de ate 30 dias (inclui 0DTE de hoje), cotacao atrasada. SpotGamma (resumo lido de manha) falava em gamma negativo abaixo de SPY 775: fontes e janelas diferentes, nao comparar direto.
+
+### 11c. CORRECAO do parametro Baker Hughes com 29 sextas de dados do MT5 (02/10/2026): a 'leve alta' NAO se confirmou (41%/38% de altas em +15/+30 min); a amplitude de 20 min e ~65-75 pts (maior que um stop de 36 pts). Confianca do parametro rebaixada a 'sem vantagem direcional comprovada'. Ver docs/historico-eventos-2026-10-02.md.

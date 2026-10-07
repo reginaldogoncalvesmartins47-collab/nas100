@@ -37,3 +37,21 @@ Fechamento do trade 10 (17:54 TV): +US$ 2,88; MFE ~+28 pts; previ dado plano / v
 
 ### FECHAMENTO do trade 11 (Logan) - 01/10/2026 21:18 TV
 Stop 30.631,3, -US$ 7,43 (stop afastado pela usuaria; original 30.610 daria -5,3). MFE ~6 pts: o trade nunca andou a favor. Previ QUEDA (tom duro, politica monetaria): conteudo acertou (2 altas de 25pb), reacao de preco NAO: sem queda; a abertura da Asia (21:00 BRT, Nikkei +1,1%) empurrou o NAS100 +~50 pts. Acertou: conteudo s / lucro n. Licao: fala dura ja precificada (Logan pede alta desde julho; Fed ja subiu em set) nao e gatilho de queda; entrar T-5 de falas de 1* a noite com liquidez fina e Asia abrindo expoe a gap de abertura; a manchete so saiu 43 min depois do evento.
+
+### Payroll de setembro - 02/10/2026, 09:30 BRT (3*) - trade 12 (COMPRA @30.717,7)
+- **Dado:** payroll **29K** (proj 89K, ant 133K revisado de 162K; surpresa -60K); privado 46K (proj 85K); desemprego **4,2%** (proj 4,1%); salario/hora **0,1%** m/m (proj 0,3%), **3,0%** a/a (proj 3,2%); U6 7,6% (ant 7,7%); participacao 61,8% (ant 61,6%).
+- **Vies do Claude:** COMPRA 4/10 (cenario Goldilocks/fraco => juros menores e tech sobe). Mudou de VENDA 5/10 apos pesquisa (SpotGamma: 50-125K => acoes sobem; Fed: chance de alta em out ~32-34%; ADP beat; petroleo e juros caindo no pre-mercado).
+- **Reacao NAS100:** 09:25 ~30.720 -> vela das 09:30 abriu 30.749 e fechou 30.868 (max 30.875, +125 pts em 5 min), 09:35 ~30.871; juros 10a 5,24% -> 5,16% (-7 pb); DXY -0,17%; VIX -3,5%; confluencia +4. M15/M60: preencher (add-reaction).
+- **Resultado do trade:** fechado 30.788,9 (+US$ 7,12, +0,48R) por take movido pela usuaria; o mercado seguiu ate >30.873. **Acertou a direcao: sim.** Capturou ~45% do movimento.
+- **Licao de tema:** emprego fraco + salario fraco = alivio de juros (nao pânico de recessao, ao menos na 1a hora). Surpresa (-60K) maior que a de agosto (+109K) em sentido oposto.
+
+### CFTC (posicoes liquidas de especuladores) - 02/10/2026, 16:30 BRT (2*) - trade 15 (COMPRA @30.793,8)
+- **Dado:** posicoes liquidas (Nasdaq 100 anterior +56,2K; S&P -133,2K); estudo mostrou razao de reacao ~1,0x (nao move o preco). Evento de baixo impacto no preco.
+- **Vies:** COMPRA de contexto, confianca baixa (D1 em alta, preco em desconto no range de NY, mercado calmo, alvo no pino GEX 30.850). Entrada 16:13 TV (T-17, antes do T-5), a mercado, 0,1 lote, stop 30.740, alvo 30.850.
+- **Resultado:** **WIN +US$ 3,32 (+0,62R, +33,2 pts)**, fechado 16:37:02 TV a 30.827,0 (fechamento manual ao ajustar o stop). **Acertou a direcao: sim.** Registrado como trade de NOTICIA (decisao da usuaria: 'entramos na noticia das 16:30 e tivemos win'). Obs: a usuaria pediu a montagem da posicao; o estudo mostrava que o CFTC nao move o preco, entao o ganho veio do contexto e nao do dado.
+- Placar de vies de noticias em 02/10: payroll (final) certo, 11:00 certo, Baker Hughes certo, CFTC certo. 4 de 4 nos finais; o inicial do payroll (VENDA) errou. Amostra pequena: nao prova nada.
+
+### 05/10/2026 - PMI Servicos S&P 10:45 e ISM Nao-Manufatura 11:00 (analise feita em 06/10; trade 16 venda @30.920,1, stop -US$ 12,59)
+- Numeros (Investing; atual/proj/ant): PMI Servicos 58,8/58,7(=flash)/58,7; PMI Composto 58,4/58,4/58,4 (zero de surpresa); ISM geral 54,9/55,1/55,4 (-0,2, miss minimo); ISM Precos 74,0/73,3/72,6 (+0,7, inflacao um pouco acima); ISM Emprego 50,1/48,8/47,8 (+1,3, emprego melhor). Sinais MISTOS e pequenos.
+- Preco M5 (BRT): abertura de NY 10:30 = vela de +100 pts (30.824 -> 30.923; amplitude 115) ANTES de qualquer dado; a venda entrou no topo dela (10:35) e o preco subiu mais +57 (10:40 max 30.977,8). PMI 10:45: amplitude 70, fechou 30.932 (sem direcao). ISM 11:00: vela com minima 30.881 (-40 vs entrada, +39 a favor da venda; unico momento no lucro) e depois +120 pts ate 31.013 (11:25). Dai em diante o minimo foi 30.966 (13:20): nunca mais voltou ao lucro; max 31.053 as 14:25 tocou o stop 31.045,2 (14:20-14:24).
+- Leitura: o movimento do dia foi o da ABERTURA DE NY e o fluxo de alta do D1, nao o PMI/ISM. Confirma o estudo MT5 (ISM/PMI 10:00 ET = 1,1x do normal, ruido) e o 01/10 ('projecao = flash ja esta no preco'). A venda foi contra D1 ALTA, apos spike, antes do dado.

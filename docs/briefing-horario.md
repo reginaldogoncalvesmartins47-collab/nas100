@@ -1,7 +1,7 @@
 # Briefing de mesa NAS100 (roteiro da usuaria, 01/10/2026) - rodar todo dia
 
 Origem: prompt que a usuaria usa nos alertas do ChatGPT (06:17 e 08:25). Aqui ele vira rotina do Claude.
-Frequencia: 06:17, 08:25 e de hora em hora na sessao de NY (10:27 a 16:27 no relogio do PC; ~2-7 min atras do TV); meia em meia hora perto de eventos 3*, se a usuaria pedir. Dias uteis.
+Frequencia: 06:17, 08:25 e de hora em hora na sessao de NY (10:27 a 16:27 no relogio do PC; ~10 min atras do TV, arredondado); meia em meia hora perto de eventos 3*, se a usuaria pedir. Dias uteis.
 
 ## Preferencias da usuaria (valem sobre o prompt original)
 - **Direcao obrigatoria: ALTA ou QUEDA.** "Neutro" so com justificativa plausivel; mesmo assim indicar o lado de menor risco e o gatilho que decide. Neutro sem justificativa "nao compensa".

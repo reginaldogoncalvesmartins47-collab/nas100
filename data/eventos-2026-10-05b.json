@@ -1,0 +1,8 @@
+[{"date":"2026-10-05","time_brt":"10:45","country":"US","event":"PMI do Setor de Serviços S&P Global (Set)","stars":3,"forecast":"58,7","previous":"58,7","source":"investing"},
+{"date":"2026-10-05","time_brt":"10:45","country":"US","event":"PMI Composto S&P Global (Set)","stars":2,"forecast":"58,4","previous":"58,4","source":"investing"},
+{"date":"2026-10-05","time_brt":"11:00","country":"US","event":"PMI ISM Não-Manufatura (Set)","stars":3,"forecast":"55,1","previous":"55,4","source":"investing"},
+{"date":"2026-10-05","time_brt":"11:00","country":"US","event":"ISM Não-Manufatura: Preços (Set)","stars":2,"previous":"72,6","source":"investing"},
+{"date":"2026-10-05","time_brt":"11:00","country":"US","event":"ISM Não-Manufatura: Emprego (Set)","stars":2,"previous":"47,8","source":"investing"},
+{"date":"2026-10-05","time_brt":"11:00","country":"US","event":"ISM Não-Manufatura: Novos Pedidos (Set)","stars":1,"previous":"60,9","source":"investing"},
+{"date":"2026-10-05","time_brt":"11:00","country":"US","event":"Atividade Empresarial Não Manufatureira ISM (Set)","stars":1,"previous":"61,7","source":"investing"},
+{"date":"2026-10-05","time_brt":"11:00","country":"US","event":"Índice de Tendência de Emprego (Set)","stars":1,"previous":"108,53","source":"investing"}]

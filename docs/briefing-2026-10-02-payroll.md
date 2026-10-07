@@ -24,4 +24,15 @@ Juros subiram forte (reforcou a alta de setembro do Fed, que veio depois); S&P 5
 - Stop largo: alem da estrutura + ~30 pts. Alvo: ver docs/gestao-saida.md item 6 (alvo maior, 1,5x o risco ou proximo nivel H1).
 
 ## 6. Pos-evento (preencher)
-Atual/projecao: ____ | vela de 09:30: ____ | +5/+10/+20 min: ____ | acertou: s/n | licao: ____
+Atual 29K / projecao 89K (anterior 133K, revisado) | vela de 09:30: abriu 30.749, fechou 30.868 (+119) | +5 min ~30.871; +10 min: preencher | acertou: SIM (viés final COMPRA; o viés inicial VENDA 5/10 estava errado) | licao: cenario Goldilocks/fraco = alta; desemprego 4,2% + salario 0,1% = alivio de juros; ver docs/reacao-noticias.md
+
+
+## 7. REANALISE 02/10 09:00 TV - vies mudou para COMPRA (confianca 5/10)
+Fontes novas: SpotGamma (cenarios), Newsquawk/Barclays (consenso 98K, risco de ajuste sazonal), CNBC/ADP, FXStreet, NQ Market Wizard (alta ate 30.840 NQ).
+- **Consenso:** 84-98K (Reuters/Bloomberg ~90K, FactSet 95K, Newsquawk 98K); privado 85K; desemprego 4,1%; salario 0,3% m/m e 3,2% a/a.
+- **Cenarios (SpotGamma):** Hot >150K, desemprego ~4,0%, salario >=0,4% -> acoes caem, juros sobem. **Goldilocks 50-125K, 4,1-4,2%, 0,2-0,3% -> acoes sobem, juros estaveis/menores (o consenso cai AQUI).** Fraco 0-50K -> misto/sobe de inicio. Recessivo <0, 4,4%+ -> cai.
+- **O que mudou vs a leitura de ontem:** chance de alta do Fed em outubro caiu para ~32-34% (era ~70% ha uma semana; PCE 3,4% vs 3,7% esperado), nao 37-50%. Fed ve o mercado de trabalho 'estavel/proximo do pleno emprego': salario e desemprego pesam mais que o numero cheio. ADP 90K vs 68-70K (beat) e claims caindo = proxies positivos; Conference Board job differential so +1,7 (fraco); Barclays: agosto (+162K) teve ajuste sazonal generoso -> risco de revisao para baixo (dois lados).
+- **Reacao do mes passado:** surpresa enorme (+162K vs 53K) -> Nasdaq so -0,29% no fechamento: mesmo um beat grande so tira ~90 pts.
+- **Posicionamento:** IV 1 dia 18,5% (movimento esperado QQQ +-1,1% = ~340 pts no NAS100); gamma negativo abaixo de SPY 775 = queda pode ser brusca se romper; pre-mercado NQ +0,7%, petroleo -4%, juros cedendo.
+- **Conclusao:** para vender precisa de 'hot' (>~130-150K): minoria dos cenarios. Probabilidade subjetiva: hot ~25%, Goldilocks ~50%, fraco ~25% (fraco tende a subir no inicio). VIES = **COMPRA 5/10** (antes VENDA 5/10). Risco principal: alta da madrugada (~220 pts) ja no preco e whipsaw da 1a vela (exagera e devolve ~50% em 5-10 min).
+- **Execucao:** entrada a mercado 09:25 TV, lote 0,1. Stop abaixo de 30.690 (fundo M5 recente) ~30.665 (~60 pts, risco ~US$ 6). Alvo 1 = 30.790 (max do dia; NQ 31.030), alvo 2 = PDH 30.904 (NQ 31.150) so com protecao. Invalidacao: dado >=150K / desemprego <=4,0% / salario >=0,4% -> fechar e considerar venda; fechamento M5 abaixo de 30.690.
