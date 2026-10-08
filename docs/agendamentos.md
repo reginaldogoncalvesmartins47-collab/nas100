@@ -23,3 +23,11 @@ Um cron one-shot por horario distinto: cron = hora do evento - 15 min no relogio
 
 ## 5. Verificacao de fontes do painel (enquanto houver pendencia de atraso)
 Uma vez por dia no pregao (~10:40 BRT): medir a ultima vela de TVC:VIX, BATS (gigantes, SMH, MU), TVC:UKOIL, TVC:DXY contra OANDA:EURUSD; trocar no painel so o que estiver atrasado.
+
+## 6. VIGIA DO GRAFICO (usuaria, 08/10/2026: "fica de olho no grafico, agende para vc sempre estar atenta")
+| cron (relogio do PC) | quando | o que faz |
+|---|---|---|
+| `*/5 0-17 * * 1-5` | seg-sex 00:00 a 17:55 | a cada 5 min: quote + painel; gerir posicao; evento em <= 15 min -> ficha + T-5; senao Passo 0 + Setup 2 (so com ficha e gate LIBERADO) |
+| `*/5 19-23 * * 0-4` | dom-qui 19:00 a 23:55 | idem; 19h-21h e a janela mais morta (exigir gatilho fechado) |
+| `45 17 * * 1-5` | ~17:55 TV | FECHAMENTO: fechar posicoes, diario, resumo-diario, aviso a usuaria |
+Regra do vigia: falar SO se algo mudou (entrada, saida, veto relevante, risco, falha de ferramenta); senao 1 linha. Toda entrada vetada -> journal/vetos.csv. Sessao-only: recriar a cada sessao nova (expira em 7 dias). Custo: cada disparo gasta uso do plano; se o limite apertar, passar para */10.
