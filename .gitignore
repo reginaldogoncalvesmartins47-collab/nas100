@@ -1,3 +1,5 @@
 data/*.db
 __pycache__/
 *.pyc
+node_modules/
+tools/pinets-lab/node_modules/
