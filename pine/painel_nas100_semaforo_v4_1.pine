@@ -1,0 +1,462 @@
+//@version=5
+// Painel de CONTEXTO NAS100 v4.1 = v4.0 + juros pela OANDA (preco do titulo, sinal invertido; tempo real a noite) + indice extra em tempo real no lugar do NQ (CME com ~10 min de atraso).
+// SEMAFORO: verde = favorece ALTA do NAS100, vermelho = favorece BAIXA, cinza = neutro. A cor mostra o EFEITO no NAS100, nao a direcao do ativo. NAO gera sinal.
+// Versao anterior fica no historico de versoes do script no TradingView.
+indicator("Painel NAS100 Semaforo v4.1", overlay=true)
+
+sy_us10 = input.symbol("OANDA:USB10YUSD", "Juros 10a (titulo OANDA = preco; ver inverter abaixo)")
+sy_us02 = input.symbol("OANDA:USB02YUSD", "Juros 2a (titulo OANDA = preco; ver inverter abaixo)")
+sy_brent = input.symbol("TVC:UKOIL", "Brent")
+sy_es = input.symbol("PEPPERSTONE:US500", "S&P CFD (tempo real)")
+sy_nq = input.symbol("OANDA:US30USD", "Indice extra (Dow OANDA, tempo real)")
+sy_vix = input.symbol("TVC:VIX", "VIX")
+sy_dxy = input.symbol("TVC:DXY", "DXY")
+lot = input.float(0.1, "Lote (US$ por ponto = lote x 1,0)")
+evtStr = input.string("", "Eventos de hoje, BRT (HH:MM separados por virgula)")
+posIn = input.string("Inferior direita", "Posicao do painel", options=["Inferior direita", "Inferior esquerda", "Superior esquerda", "Superior direita"])
+szIn = input.string("Pequeno", "Tamanho do texto", options=["Minusculo", "Pequeno", "Normal"])
+gexFlip = input.float(0.0, "GEX flip em NAS100 (0 = nao usar)", group="GEX (preencher a mao)")
+gexCall = input.float(0.0, "GEX muro de call em NAS100", group="GEX (preencher a mao)")
+gexPut = input.float(0.0, "GEX muro de put em NAS100", group="GEX (preencher a mao)")
+sy_g1 = input.symbol("NASDAQ:NVDA", "Gigante 1", group="Gigantes")
+sy_g2 = input.symbol("NASDAQ:MSFT", "Gigante 2", group="Gigantes")
+sy_g3 = input.symbol("NASDAQ:AAPL", "Gigante 3", group="Gigantes")
+sy_g4 = input.symbol("NASDAQ:AMZN", "Gigante 4", group="Gigantes")
+sy_g5 = input.symbol("NASDAQ:GOOGL", "Gigante 5", group="Gigantes")
+sy_g6 = input.symbol("NASDAQ:AVGO", "Gigante 6", group="Gigantes")
+sy_g7 = input.symbol("NASDAQ:META", "Gigante 7", group="Gigantes")
+sy_g8 = input.symbol("NASDAQ:TSLA", "Gigante 8", group="Gigantes")
+sy_semi = input.symbol("NASDAQ:SMH", "Semicondutores (ETF)", group="Gigantes")
+sy_mu = input.symbol("NASDAQ:MU", "Micron (termometro IA/memoria)", group="Gigantes")
+w1 = input.float(10.0, "Peso 1 %", group="Gigantes")
+w2 = input.float(8.0, "Peso 2 %", group="Gigantes")
+w3 = input.float(8.0, "Peso 3 %", group="Gigantes")
+w4 = input.float(5.0, "Peso 4 %", group="Gigantes")
+w5 = input.float(5.0, "Peso 5 %", group="Gigantes")
+w6 = input.float(5.0, "Peso 6 %", group="Gigantes")
+w7 = input.float(4.0, "Peso 7 %", group="Gigantes")
+w8 = input.float(3.0, "Peso 8 %", group="Gigantes")
+showDet = input.bool(true, "Mostrar tabela de detalhes (numeros e niveis)")
+isPrice10 = input.bool(true, "Juros 10a: o simbolo e PRECO do titulo (inverter o sinal)", group="Juros")
+dur10 = input.float(8.0, "Duracao do titulo 10a (anos)", group="Juros")
+isPrice02 = input.bool(true, "Juros 2a: o simbolo e PRECO do titulo (inverter o sinal)", group="Juros")
+dur02 = input.float(1.9, "Duracao do titulo 2a (anos)", group="Juros")
+sy_lvl10 = input.symbol("TVC:US10Y", "Nivel do juro 10a (so exibicao)", group="Juros")
+sy_lvl02 = input.symbol("TVC:US02Y", "Nivel do juro 2a (so exibicao)", group="Juros")
+tz = "America/Sao_Paulo"
+
+// variacao do juro em pontos-base: rendimento -> x*100; preco do titulo -> -x*100/duracao (1 pb ~ duracao/100 de preco)
+f_bp(x, isP, dur) => isP ? -x * 100 / dur : x * 100
+
+f_dop() => ta.valuewhen(ta.change(time("D")) != 0, open, 0)
+[u15r, u60r, ut, ud0r] = request.security(sy_us10, "5", [close - close[3], close - close[12], time, close - f_dop()])
+[b15, b60, bt, bd0] = request.security(sy_brent, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time, (close / f_dop() - 1) * 100])
+[e15, e60, et, ed0] = request.security(sy_es, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time, (close / f_dop() - 1) * 100])
+[n15, n60, nt, nd0] = request.security(sy_nq, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time, (close / f_dop() - 1) * 100])
+[v15, v60, vt, vd0] = request.security(sy_vix, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time, (close / f_dop() - 1) * 100])
+[d15, d60, dt, dd0] = request.security(sy_dxy, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time, (close / f_dop() - 1) * 100])
+[x15r, x60r, xt, xd0r] = request.security(sy_us02, "5", [close - close[3], close - close[12], time, close - f_dop()])
+u15 = f_bp(u15r, isPrice10, dur10)
+u60 = f_bp(u60r, isPrice10, dur10)
+ud0 = f_bp(ud0r, isPrice10, dur10)
+x15 = f_bp(x15r, isPrice02, dur02)
+x60 = f_bp(x60r, isPrice02, dur02)
+xd0 = f_bp(xd0r, isPrice02, dur02)
+cv10 = request.security(sy_lvl10, "5", close)
+cv02 = request.security(sy_lvl02, "5", close)
+f_alive(t) => (timenow - t) <= 20 * 60000
+aU = f_alive(ut)
+aB = f_alive(bt)
+aE = f_alive(et)
+aN = f_alive(nt)
+aV = f_alive(vt)
+aD = f_alive(dt)
+aX = f_alive(xt)
+nqParts = str.split(sy_nq, ":")
+nqName = array.size(nqParts) > 1 ? array.get(nqParts, 1) : sy_nq
+
+[g1a, g1b, g1t] = request.security(sy_g1, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time])
+[g2a, g2b] = request.security(sy_g2, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g3a, g3b] = request.security(sy_g3, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g4a, g4b] = request.security(sy_g4, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g5a, g5b] = request.security(sy_g5, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g6a, g6b] = request.security(sy_g6, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g7a, g7b] = request.security(sy_g7, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[g8a, g8b] = request.security(sy_g8, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[sma, smb] = request.security(sy_semi, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100])
+[mua, mub, mut] = request.security(sy_mu, "5", [(close - close[3]) / close[3] * 100, (close - close[12]) / close[12] * 100, time])
+aG = f_alive(g1t)
+aM = f_alive(mut)
+
+wsum = w1 + w2 + w3 + w4 + w5 + w6 + w7 + w8
+gw15 = (nz(g1a) * w1 + nz(g2a) * w2 + nz(g3a) * w3 + nz(g4a) * w4 + nz(g5a) * w5 + nz(g6a) * w6 + nz(g7a) * w7 + nz(g8a) * w8) / wsum
+gw60 = (nz(g1b) * w1 + nz(g2b) * w2 + nz(g3b) * w3 + nz(g4b) * w4 + nz(g5b) * w5 + nz(g6b) * w6 + nz(g7b) * w7 + nz(g8b) * w8) / wsum
+gup15 = (g1a > 0 ? 1 : 0) + (g2a > 0 ? 1 : 0) + (g3a > 0 ? 1 : 0) + (g4a > 0 ? 1 : 0) + (g5a > 0 ? 1 : 0) + (g6a > 0 ? 1 : 0) + (g7a > 0 ? 1 : 0) + (g8a > 0 ? 1 : 0)
+gup60 = (g1b > 0 ? 1 : 0) + (g2b > 0 ? 1 : 0) + (g3b > 0 ? 1 : 0) + (g4b > 0 ? 1 : 0) + (g5b > 0 ? 1 : 0) + (g6b > 0 ? 1 : 0) + (g7b > 0 ? 1 : 0) + (g8b > 0 ? 1 : 0)
+
+f_sc(v, th, inv) =>
+    r = v > th ? 1 : v < -th ? -1 : 0
+    inv ? -r : r
+f_ar(v, th) => v > 0 ? "▲" : v < 0 ? "▼" : "▬"
+f_sg(x) => (x > 0 ? "+" : "") + str.tostring(x, "0.0")
+f_sg0(x) => (x > 0 ? "+" : "") + str.tostring(x, "0")
+
+f_l(a, x) => a ? x : 0
+s15 = f_l(aU, f_sc(u15, 1.5, true)) + f_l(aB, f_sc(b15, 0.3, true)) + f_l(aE, f_sc(e15, 0.08, false)) + f_l(aN, f_sc(n15, 0.10, false)) + f_l(aV, f_sc(v15, 1.0, true)) + f_l(aD, f_sc(d15, 0.05, true))
+s60 = f_l(aU, f_sc(u60, 4.0, true)) + f_l(aB, f_sc(b60, 0.6, true)) + f_l(aE, f_sc(e60, 0.20, false)) + f_l(aN, f_sc(n60, 0.25, false)) + f_l(aV, f_sc(v60, 2.5, true)) + f_l(aD, f_sc(d60, 0.12, true))
+
+f_reg() =>
+    ph = ta.pivothigh(high, 2, 2)
+    pl = ta.pivotlow(low, 2, 2)
+    h1 = ta.valuewhen(not na(ph), ph, 0)
+    h2 = ta.valuewhen(not na(ph), ph, 1)
+    l1 = ta.valuewhen(not na(pl), pl, 0)
+    l2 = ta.valuewhen(not na(pl), pl, 1)
+    up = h1 > h2 and l1 > l2
+    dn = h1 < h2 and l1 < l2
+    [up ? 1 : dn ? -1 : 0, h1, l1]
+
+[reg15, h15, l15] = request.security(syminfo.tickerid, "15", f_reg())
+[reg60, h60, l60] = request.security(syminfo.tickerid, "60", f_reg())
+
+pdh = request.security(syminfo.tickerid, "D", high[1], lookahead=barmerge.lookahead_on)
+pdl = request.security(syminfo.tickerid, "D", low[1], lookahead=barmerge.lookahead_on)
+pdo = request.security(syminfo.tickerid, "D", open[1], lookahead=barmerge.lookahead_on)
+pdc = request.security(syminfo.tickerid, "D", close[1], lookahead=barmerge.lookahead_on)
+dOpen = request.security(syminfo.tickerid, "D", open, lookahead=barmerge.lookahead_on)
+dHigh = request.security(syminfo.tickerid, "D", high)
+dLow = request.security(syminfo.tickerid, "D", low)
+ema20d = request.security(syminfo.tickerid, "D", ta.ema(close, 20))
+atr5 = ta.atr(14)
+atr15 = request.security(syminfo.tickerid, "15", ta.atr(14))
+
+pdBull = pdc > pdo
+pdMid = (pdh + pdl) / 2
+pdRange = pdh - pdl
+pd79 = pdBull ? pdl + 0.21 * pdRange : pdl + 0.79 * pdRange
+
+newNY = ta.change(time("D", "0000-2400", "America/New_York")) != 0
+var float nyOpen = na
+if newNY
+    nyOpen := open
+
+utcH = hour(time, "UTC")
+utcM = minute(time, "UTC")
+inAsia = utcH < 6
+inLon = utcH >= 6 and (utcH < 13 or (utcH == 13 and utcM < 30))
+inNYAM = (utcH == 13 and utcM >= 30) or (utcH >= 14 and utcH < 16)
+inNYL = utcH >= 16 and (utcH < 17 or (utcH == 17 and utcM < 30))
+inNYPM = (utcH == 17 and utcM >= 30) or (utcH >= 18 and utcH < 20)
+sessTxt = inAsia ? "ASIA" : inLon ? "LONDRES" : inNYAM ? "NY AM" : inNYL ? "NY LUNCH" : inNYPM ? "NY PM" : "FORA"
+var float asiaOpen = na
+var float asiaEnd = na
+var float lonOpen = na
+var float lonEnd = na
+if inAsia and not inAsia[1]
+    asiaOpen := open
+if inAsia
+    asiaEnd := close
+if inLon and not inLon[1]
+    lonOpen := open
+if inLon
+    lonEnd := close
+
+var float asH = na
+var float asL = na
+var float lnH = na
+var float lnL = na
+var float nyH = na
+var float nyL = na
+if inAsia
+    if not inAsia[1] or na(asH)
+        asH := high
+        asL := low
+    else
+        asH := math.max(asH, high)
+        asL := math.min(asL, low)
+if inLon
+    if not inLon[1] or na(lnH)
+        lnH := high
+        lnL := low
+    else
+        lnH := math.max(lnH, high)
+        lnL := math.min(lnL, low)
+if inNYAM
+    if not inNYAM[1] or na(nyH)
+        nyH := high
+        nyL := low
+    else
+        nyH := math.max(nyH, high)
+        nyL := math.min(nyL, low)
+
+if barstate.islast
+    line.new(bar_index - 50, pdh, bar_index + 5, pdh, color=color.new(color.red, 30), style=line.style_dashed)
+    line.new(bar_index - 50, pdl, bar_index + 5, pdl, color=color.new(color.green, 30), style=line.style_dashed)
+
+nowMin = hour(timenow, tz) * 60 + minute(timenow, tz)
+closeIn = 17 * 60 + 55 - nowMin
+
+nyKey = year(time, "America/New_York") * 10000 + month(time, "America/New_York") * 100 + dayofmonth(time, "America/New_York")
+nyMinT = hour(time, "America/New_York") * 60 + minute(time, "America/New_York")
+nyNewDay = nyKey != nz(nyKey[1])
+nyStartBar = nyMinT >= 570 and (nz(nyMinT[1]) < 570 or nyNewDay)
+f_vwap(rst) =>
+    var float sv = 0.0
+    var float spv = 0.0
+    if rst
+        sv := 0.0
+        spv := 0.0
+    vv = volume > 0 ? volume : 1.0
+    sv += vv
+    spv += hlc3 * vv
+    spv / sv
+vwNY = f_vwap(nyStartBar)
+
+f_nextEvt() =>
+    parts = str.split(evtStr, ",")
+    float best = 99999.0
+    string bestS = "—"
+    for p in parts
+        s = str.trim(p)
+        if str.length(s) >= 5
+            hh = str.tonumber(str.substring(s, 0, 2))
+            mm = str.tonumber(str.substring(s, 3, 5))
+            if not na(hh) and not na(mm)
+                float t = hh * 60 + mm
+                if t > nowMin and t - nowMin < best
+                    best := t - nowMin
+                    bestS := s
+    [bestS, best]
+[evS, evIn] = f_nextEvt()
+
+f_e(a, sc) => a ? sc : 99
+eU = f_e(aU, f_sc(ud0, 3.0, true))
+eX = f_e(aX, f_sc(xd0, 3.0, true))
+eB = f_e(aB, f_sc(bd0, 0.5, true))
+eD = f_e(aD, f_sc(dd0, 0.15, true))
+eV = f_e(aV, f_sc(vd0, 3.0, true))
+eN = f_e(aN, f_sc(nd0, 0.15, false))
+eE = f_e(aE, f_sc(ed0, 0.15, false))
+eG = f_e(aG, f_sc(gw60, 0.25, false))
+eS = f_e(aG, f_sc(smb, 0.25, false))
+eM = f_e(aM, f_sc(mub, 0.40, false))
+eU15 = f_e(aU, f_sc(u15, 1.5, true))
+eX15 = f_e(aX, f_sc(x15, 1.5, true))
+eB15 = f_e(aB, f_sc(b15, 0.3, true))
+eD15 = f_e(aD, f_sc(d15, 0.05, true))
+eV15 = f_e(aV, f_sc(v15, 1.0, true))
+eN15 = f_e(aN, f_sc(n15, 0.10, false))
+eE15 = f_e(aE, f_sc(e15, 0.08, false))
+eG15 = f_e(aG, f_sc(gw15, 0.10, false))
+eS15 = f_e(aG, f_sc(sma, 0.10, false))
+eM15 = f_e(aM, f_sc(mua, 0.15, false))
+f_cnt(e, v) => e == v ? 1 : 0
+nUp = f_cnt(eU, 1) + f_cnt(eX, 1) + f_cnt(eB, 1) + f_cnt(eD, 1) + f_cnt(eV, 1) + f_cnt(eN, 1) + f_cnt(eE, 1) + f_cnt(eG, 1) + f_cnt(eS, 1) + f_cnt(eM, 1)
+nDn = f_cnt(eU, -1) + f_cnt(eX, -1) + f_cnt(eB, -1) + f_cnt(eD, -1) + f_cnt(eV, -1) + f_cnt(eN, -1) + f_cnt(eE, -1) + f_cnt(eG, -1) + f_cnt(eS, -1) + f_cnt(eM, -1)
+nAlive = f_cnt(eU, 99) + f_cnt(eX, 99) + f_cnt(eB, 99) + f_cnt(eD, 99) + f_cnt(eV, 99) + f_cnt(eN, 99) + f_cnt(eE, 99) + f_cnt(eG, 99) + f_cnt(eS, 99) + f_cnt(eM, 99)
+nNet = nUp - nDn
+
+tpos = posIn == "Inferior direita" ? position.bottom_right : posIn == "Inferior esquerda" ? position.bottom_left : posIn == "Superior esquerda" ? position.top_left : position.top_right
+tsz = szIn == "Minusculo" ? size.tiny : szIn == "Normal" ? size.normal : size.small
+cG = color.new(#089981, 20)
+cR = color.new(#f23645, 20)
+cN = color.new(color.gray, 55)
+var tbl = table.new(tpos, 3, 26, bgcolor=color.new(color.black, 10), border_width=1, border_color=color.new(color.gray, 70), frame_width=1, frame_color=color.new(color.gray, 40))
+var tb2 = table.new(position.top_left, 3, 40, bgcolor=color.new(color.black, 20), border_width=0)
+
+f_txt(r, c, txt, col) => table.cell(tbl, c, r, txt, text_color=col, text_size=tsz, text_halign=text.align_left)
+f_sec(r, txt) =>
+    table.cell(tbl, 0, r, txt, text_color=color.yellow, text_size=tsz, text_halign=text.align_left, bgcolor=color.new(color.gray, 65))
+    table.cell(tbl, 1, r, "", bgcolor=color.new(color.gray, 65), text_size=tsz)
+    table.cell(tbl, 2, r, "", bgcolor=color.new(color.gray, 65), text_size=tsz)
+f_cellT(r, c, e, txt) =>
+    bg = e == 1 ? cG : e == -1 ? cR : e == 0 ? cN : color.new(color.black, 0)
+    table.cell(tbl, c, r, txt, text_color=e == 99 ? color.gray : color.white, bgcolor=bg, text_size=tsz, text_halign=text.align_center)
+f_lab(e) => e == 1 ? "▲ ALTA" : e == -1 ? "▼ BAIXA" : e == 0 ? "— neutro" : "sem dado"
+f_row(r, nm, eD0, e15x) =>
+    f_txt(r, 0, nm, color.white)
+    f_cellT(r, 1, eD0, f_lab(eD0))
+    f_cellT(r, 2, e15x, f_lab(e15x))
+
+if barstate.islast
+    verd = nNet >= 3 ? "▲ ALTA" : nNet <= -3 ? "▼ BAIXA" : nNet >= 1 ? "inclina ▲" : nNet <= -1 ? "inclina ▼" : "SEM LADO"
+    vbg = nNet >= 3 ? cG : nNet <= -3 ? cR : nNet >= 1 ? color.new(#089981, 55) : nNet <= -1 ? color.new(#f23645, 55) : color.new(color.gray, 40)
+    f_txt(0, 0, "NAS100", color.yellow)
+    table.cell(tbl, 1, 0, verd, text_color=color.white, bgcolor=vbg, text_size=size.large, text_halign=text.align_center)
+    table.cell(tbl, 2, 0, "ALTA " + str.tostring(nUp) + " | BAIXA " + str.tostring(nDn), text_color=color.white, bgcolor=vbg, text_size=tsz, text_halign=text.align_center)
+    f_txt(1, 0, "O que favorece o NAS100", color.silver)
+    f_txt(1, 1, "No dia", color.silver)
+    f_txt(1, 2, "15 min", color.silver)
+    f_sec(2, "MACRO")
+    f_row(3, "Juros 10a  " + str.tostring(cv10, "0.00") + "%", eU, eU15)
+    f_row(4, "Juros 2a  " + str.tostring(cv02, "0.00") + "%", eX, eX15)
+    f_row(5, "Brent", eB, eB15)
+    f_row(6, "Dolar (DXY)", eD, eD15)
+    f_row(7, "VIX", eV, eV15)
+    f_sec(8, "MERCADO")
+    f_row(9, nqName, eN, eN15)
+    f_row(10, "S&P", eE, eE15)
+    f_row(11, "Gigantes (" + str.tostring(gup60) + " de 8 sobem)", eG, eG15)
+    f_row(12, "Chips (SMH)", eS, eS15)
+    f_row(13, "Micron", eM, eM15)
+    f_sec(14, "PRECO")
+    vwE = close > vwNY ? 1 : -1
+    f_txt(15, 0, "VWAP NY " + str.tostring(vwNY, "0"), color.white)
+    f_cellT(15, 1, vwE, close > vwNY ? "▲ acima" : "▼ abaixo")
+    f_txt(15, 2, f_sg0(close - vwNY) + " pts", color.silver)
+    f_txt(16, 0, "Tendencia M15 | H1", color.white)
+    f_cellT(16, 1, reg15, reg15 == 1 ? "▲ ALTA" : reg15 == -1 ? "▼ BAIXA" : "— lateral")
+    f_cellT(16, 2, reg60, reg60 == 1 ? "▲ ALTA" : reg60 == -1 ? "▼ BAIXA" : "— lateral")
+    f_txt(17, 0, "Ontem | acima EMA20 D1", color.white)
+    f_cellT(17, 1, pdBull ? 1 : -1, pdBull ? "▲ ALTA" : "▼ BAIXA")
+    f_cellT(17, 2, close > ema20d ? 1 : -1, close > ema20d ? "▲ acima" : "▼ abaixo")
+    tol = math.max(10.0, 0.4 * atr15)
+    lvs = array.from(pdh, pdl, asH, asL, lnH, lnL, nyH, nyL)
+    lvn = array.from("PDH", "PDL", "Asia H", "Asia L", "Londres H", "Londres L", "NY AM H", "NY AM L")
+    bestD = 99999.0
+    bestI = -1
+    for j = 0 to 7
+        xv = array.get(lvs, j)
+        if not na(xv)
+            dz = math.abs(close - xv)
+            if dz <= tol and dz < bestD
+                bestD := dz
+                bestI := j
+    isHi = bestI >= 0 and bestI % 2 == 0
+    cTxt = bestI < 0 ? "nenhum nivel perto" : (isHi ? "ZONA DE VENDA: " : "ZONA DE COMPRA: ") + array.get(lvn, bestI) + " (" + f_sg0(array.get(lvs, bestI) - close) + ")"
+    f_txt(18, 0, "Nivel perto", color.white)
+    f_cellT(18, 1, bestI < 0 ? 0 : isHi ? -1 : 1, cTxt)
+    f_txt(18, 2, "tol " + str.tostring(tol, "0") + " pts", color.silver)
+    upD = 99999.0
+    dnD = 99999.0
+    upN = "—"
+    dnN = "—"
+    names = array.from("PDH", "MEIO", "OTE", "NY00", "PDL")
+    vals = array.from(pdh, pdMid, pd79, nyOpen, pdl)
+    for i = 0 to 4
+        v = array.get(vals, i)
+        if not na(v)
+            dd = v - close
+            if dd > 0 and dd < upD
+                upD := dd
+                upN := array.get(names, i)
+            if dd < 0 and -dd < dnD
+                dnD := -dd
+                dnN := array.get(names, i)
+    f_txt(19, 0, "Proximo acima | abaixo", color.white)
+    f_txt(19, 1, upN + (upD < 99999.0 ? " +" + str.tostring(upD, "0") : ""), color.orange)
+    f_txt(19, 2, dnN + (dnD < 99999.0 ? " -" + str.tostring(dnD, "0") : ""), color.aqua)
+    f_sec(20, "TEMPO")
+    f_txt(21, 0, "Hora TV", color.white)
+    f_txt(21, 1, str.format_time(timenow, "HH:mm:ss", tz), color.white)
+    f_txt(21, 2, sessTxt, color.silver)
+    f_txt(22, 0, "Fechar 17:55", color.white)
+    f_txt(22, 1, closeIn > 0 ? "em " + str.tostring(closeIn) + " min" : "PASSOU", closeIn <= 10 ? color.red : closeIn <= 30 ? color.orange : color.silver)
+    f_txt(22, 2, "", color.silver)
+    f_txt(23, 0, "Proximo evento", color.white)
+    f_txt(23, 1, evIn < 99999 ? evS + " BRT" : "—", color.white)
+    f_txt(23, 2, evIn < 99999 ? "em " + str.tostring(evIn) + " min" : "", evIn <= 15 ? color.orange : color.silver)
+    f_txt(24, 0, "Dados vivos", color.white)
+    f_txt(24, 1, str.tostring(10 - nAlive) + " de 10", nAlive >= 4 ? color.orange : color.silver)
+    f_txt(24, 2, "", color.silver)
+
+f_p2(r, c, txt, col) => table.cell(tb2, c, r, txt, text_color=col, text_size=tsz, text_halign=text.align_left)
+f_pc2(r, c, a, txt, col) => f_p2(r, c, a ? txt : "parado", a ? col : color.gray)
+f_colr(sc) => sc > 0 ? color.lime : sc < 0 ? color.red : color.silver
+f_rg(x) => x > 0 ? "ALTA" : x < 0 ? "BAIXA" : "LATERAL"
+f_lvl2(r, nm, px) =>
+    if na(px)
+        f_p2(r, 0, nm + " —", color.silver)
+    else
+        d = px - close
+        f_p2(r, 0, nm + " " + str.tostring(px, "0.0"), color.white)
+        f_p2(r, 1, f_sg(d), d > 0 ? color.orange : color.aqua)
+        f_p2(r, 2, "$" + f_sg(d * lot), color.silver)
+
+if barstate.islast and showDet
+    f_p2(0, 0, "DETALHES (numeros)", color.yellow)
+    f_p2(0, 1, "15m", color.yellow)
+    f_p2(0, 2, "vs abert", color.yellow)
+    f_p2(1, 0, "Juros10 pb", color.white)
+    f_pc2(1, 1, aU, f_ar(u15, 1.5) + f_sg(u15), f_colr(f_sc(u15, 1.5, true)))
+    f_pc2(1, 2, aU, f_ar(ud0, 3.0) + f_sg(ud0), f_colr(f_sc(ud0, 3.0, true)))
+    f_p2(2, 0, "Brent %", color.white)
+    f_pc2(2, 1, aB, f_ar(b15, 0.3) + str.tostring(b15, "0.00"), f_colr(f_sc(b15, 0.3, true)))
+    f_pc2(2, 2, aB, f_ar(bd0, 0.5) + str.tostring(bd0, "0.00"), f_colr(f_sc(bd0, 0.5, true)))
+    f_p2(3, 0, "S&P CFD %", color.white)
+    f_pc2(3, 1, aE, f_ar(e15, 0.08) + str.tostring(e15, "0.00"), f_colr(f_sc(e15, 0.08, false)))
+    f_pc2(3, 2, aE, f_ar(ed0, 0.15) + str.tostring(ed0, "0.00"), f_colr(f_sc(ed0, 0.15, false)))
+    f_p2(4, 0, nqName + " %", color.white)
+    f_pc2(4, 1, aN, f_ar(n15, 0.1) + str.tostring(n15, "0.00"), f_colr(f_sc(n15, 0.1, false)))
+    f_pc2(4, 2, aN, f_ar(nd0, 0.15) + str.tostring(nd0, "0.00"), f_colr(f_sc(nd0, 0.15, false)))
+    f_p2(5, 0, "VIX %", color.white)
+    f_pc2(5, 1, aV, f_ar(v15, 1.0) + str.tostring(v15, "0.0"), f_colr(f_sc(v15, 1.0, true)))
+    f_pc2(5, 2, aV, f_ar(vd0, 3.0) + str.tostring(vd0, "0.0"), f_colr(f_sc(vd0, 3.0, true)))
+    f_p2(6, 0, "DXY %", color.white)
+    f_pc2(6, 1, aD, f_ar(d15, 0.05) + str.tostring(d15, "0.000"), f_colr(f_sc(d15, 0.05, true)))
+    f_pc2(6, 2, aD, f_ar(dd0, 0.15) + str.tostring(dd0, "0.000"), f_colr(f_sc(dd0, 0.15, true)))
+    verdOld = s60 >= 3 ? "ALTA" : s60 <= -3 ? "BAIXA" : "MISTO"
+    f_p2(7, 0, "Confluencia", color.white)
+    f_p2(7, 1, f_sg0(s15), f_colr(s15))
+    f_p2(7, 2, f_sg0(s60) + " " + verdOld, f_colr(s60))
+    f_p2(8, 0, "Regime M15 | H1", color.white)
+    f_p2(8, 1, f_rg(reg15), f_colr(reg15))
+    f_p2(8, 2, f_rg(reg60), f_colr(reg60))
+    vsOpen = close - dOpen
+    f_p2(9, 0, "vs abertura dia", color.white)
+    f_p2(9, 1, f_sg(vsOpen), f_colr(vsOpen))
+    f_p2(9, 2, "$" + f_sg(vsOpen * lot), color.silver)
+    f_lvl2(10, "PDH", pdh)
+    f_lvl2(11, "MEIO", pdMid)
+    f_lvl2(12, "OTE", pd79)
+    f_lvl2(13, "NY00", nyOpen)
+    f_lvl2(14, "PDL", pdl)
+    f_p2(15, 0, "Asia H | L", color.white)
+    f_p2(15, 1, na(asH) ? "—" : str.tostring(asH, "0") + " (" + f_sg0(asH - close) + ")", color.orange)
+    f_p2(15, 2, na(asL) ? "—" : str.tostring(asL, "0") + " (" + f_sg0(asL - close) + ")", color.aqua)
+    f_p2(16, 0, "Londres H | L", color.white)
+    f_p2(16, 1, na(lnH) ? "—" : str.tostring(lnH, "0") + " (" + f_sg0(lnH - close) + ")", color.orange)
+    f_p2(16, 2, na(lnL) ? "—" : str.tostring(lnL, "0") + " (" + f_sg0(lnL - close) + ")", color.aqua)
+    f_p2(17, 0, "NY AM H | L", color.white)
+    f_p2(17, 1, na(nyH) ? "—" : str.tostring(nyH, "0") + " (" + f_sg0(nyH - close) + ")", color.orange)
+    f_p2(17, 2, na(nyL) ? "—" : str.tostring(nyL, "0") + " (" + f_sg0(nyL - close) + ")", color.aqua)
+    f_p2(18, 0, "Dia H | L", color.white)
+    f_p2(18, 1, str.tostring(dHigh, "0.0"), color.silver)
+    f_p2(18, 2, str.tostring(dLow, "0.0"), color.silver)
+    f_p2(19, 0, "ATR M5 | M15", color.white)
+    f_p2(19, 1, str.tostring(atr5, "0.0"), color.silver)
+    f_p2(19, 2, str.tostring(atr15, "0.0"), color.silver)
+    f_p2(20, 0, "GIGANTES pond. 15m|1h", color.yellow)
+    f_pc2(20, 1, aG, f_ar(gw15, 0.10) + str.tostring(gw15, "0.00"), f_colr(f_sc(gw15, 0.10, false)))
+    f_pc2(20, 2, aG, f_ar(gw60, 0.25) + str.tostring(gw60, "0.00"), f_colr(f_sc(gw60, 0.25, false)))
+    f_p2(21, 0, "Sobem de 8 (15m|1h)", color.white)
+    f_pc2(21, 1, aG, str.tostring(gup15), gup15 >= 6 ? color.lime : gup15 <= 2 ? color.red : color.silver)
+    f_pc2(21, 2, aG, str.tostring(gup60), gup60 >= 6 ? color.lime : gup60 <= 2 ? color.red : color.silver)
+    f_p2(22, 0, "NVDA MSFT AAPL AMZN", color.white)
+    f_pc2(22, 1, aG, f_ar(g1a, 0.05) + f_ar(g2a, 0.05) + f_ar(g3a, 0.05) + f_ar(g4a, 0.05), color.silver)
+    f_pc2(22, 2, aG, f_ar(g1b, 0.1) + f_ar(g2b, 0.1) + f_ar(g3b, 0.1) + f_ar(g4b, 0.1), color.silver)
+    f_p2(23, 0, "GOOGL AVGO META TSLA", color.white)
+    f_pc2(23, 1, aG, f_ar(g5a, 0.05) + f_ar(g6a, 0.05) + f_ar(g7a, 0.05) + f_ar(g8a, 0.05), color.silver)
+    f_pc2(23, 2, aG, f_ar(g5b, 0.1) + f_ar(g6b, 0.1) + f_ar(g7b, 0.1) + f_ar(g8b, 0.1), color.silver)
+    f_p2(24, 0, "Semis SMH 15m|1h", color.white)
+    f_pc2(24, 1, aG, f_ar(sma, 0.10) + str.tostring(sma, "0.00"), f_colr(f_sc(sma, 0.10, false)))
+    f_pc2(24, 2, aG, f_ar(smb, 0.25) + str.tostring(smb, "0.00"), f_colr(f_sc(smb, 0.25, false)))
+    f_p2(25, 0, "Micron MU 15m|1h", color.white)
+    f_pc2(25, 1, aM, f_ar(mua, 0.15) + str.tostring(mua, "0.00"), f_colr(f_sc(mua, 0.15, false)))
+    f_pc2(25, 2, aM, f_ar(mub, 0.40) + str.tostring(mub, "0.00"), f_colr(f_sc(mub, 0.40, false)))
+    f_p2(26, 0, "Juros2 pb", color.white)
+    f_pc2(26, 1, aX, f_ar(x15, 1.5) + f_sg(x15), f_colr(f_sc(x15, 1.5, true)))
+    f_pc2(26, 2, aX, f_ar(xd0, 3.0) + f_sg(xd0), f_colr(f_sc(xd0, 3.0, true)))
+    curva = (cv10 - cv02) * 100
+    f_p2(27, 0, "Curva 10a-2a pb", color.white)
+    f_p2(27, 1, na(curva) ? "—" : f_sg0(curva), color.silver)
+    f_p2(27, 2, na(curva) ? "—" : str.tostring(cv10, "0.000") + "|" + str.tostring(cv02, "0.000"), color.silver)
+    f_p2(28, 0, "VWAP NY", color.white)
+    f_p2(28, 1, str.tostring(vwNY, "0.0"), color.silver)
+    f_p2(28, 2, f_sg0(close - vwNY) + " pts", color.silver)
+    f_p2(29, 0, "GEX flip | muro call", color.white)
+    f_p2(29, 1, gexFlip > 0 ? str.tostring(gexFlip, "0") + " (" + f_sg0(gexFlip - close) + ")" : "—", gexFlip > 0 ? color.orange : color.gray)
+    f_p2(29, 2, gexCall > 0 ? str.tostring(gexCall, "0") + " (" + f_sg0(gexCall - close) + ")" : "—", gexCall > 0 ? color.orange : color.gray)
+    f_p2(30, 0, "GEX muro put", color.white)
+    f_p2(30, 1, gexPut > 0 ? str.tostring(gexPut, "0") + " (" + f_sg0(gexPut - close) + ")" : "—", gexPut > 0 ? color.aqua : color.gray)
+    f_p2(30, 2, "so contexto", color.silver)
