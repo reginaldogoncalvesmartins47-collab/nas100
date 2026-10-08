@@ -1,2 +1,3 @@
 data,hora_brt,lado_que_ia_entrar,preco,item_que_vetou,motivo,preco_15min_depois,preco_60min_depois,veto_acertou(sim/nao/incerto)
 2026-10-08,00:52,COMPRA,31146.8,1 gate; 9 estrutura M5 BAIXA sem CHoCH de alta; 11 sem rejeicao fechada,OB demanda 31114-31147 tocada no topo; ultima vela M5 fechada 00:45 sem pavio (0.6); R:R ~1.1-1.3 ate OTE/oferta,31131.3 (01:08; -15.5),,sim (15min; falta 60min)
+2026-10-08,13:25,VENDA,31018.8,"4/5 macro e mercado a favor da ALTA nos 15 min (juros, DXY, VIX, S&P, gigantes, chips); 13 R:R ~1,0 a 1,6 com stop de 77 pts acima do pavio","varrida da NY AM H (31050) com pavio superior de 78 pts, vela M5 13:15 fechou em 30998.8 (rejeicao vendedora valida), mas o preco ja repicou +20 pts e o painel virou ALTA; entrada perdida no fechamento",,,""
