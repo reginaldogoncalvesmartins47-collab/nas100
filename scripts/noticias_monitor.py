@@ -7,9 +7,9 @@ import re, sys, time, urllib.request, urllib.parse, xml.etree.ElementTree as ET,
 from email.utils import parsedate_to_datetime
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf8', errors='replace', line_buffering=True)
 BRT = dt.timezone(dt.timedelta(hours=-3))
-KW = re.compile(r"\b(fed|fomc|powell|waller|bowman|williams|logan|treasury|yield|bessent|trump|iran|tariff|oil|opec|nasdaq|nvidia|micron|chip|semiconductor|auction|rate hike|inflation|cpi|payroll|jobs|ceasefire|attack|strike|sanction|china|taiwan|crash|plunge|surge|tumble|selloff|rally)\b", re.I)
+KW = re.compile(r"\b(fed|fomc|powell|waller|bowman|williams|logan|treasury|yield|bessent|iran|tariff|oil|opec|nasdaq|nvidia|micron|chip|semiconductor|auction|rate hike|inflation|cpi|payroll|jobs|ceasefire|attack|strike|sanction|china|taiwan|crash|plunge|surge|tumble|selloff|rally)\b", re.I)
 Q = lambda q: 'https://news.google.com/rss/search?q=' + urllib.parse.quote(q) + '&hl=en-US&gl=US&ceid=US:en'
-FEEDS = {'FedPress': 'https://www.federalreserve.gov/feeds/press_all.xml',
+FEEDS = {'Bloomberg-Politica': 'https://feeds.bloomberg.com/politics/news.rss', 'Bloomberg-Mercados': 'https://feeds.bloomberg.com/markets/news.rss', 'Bloomberg-Economia': 'https://feeds.bloomberg.com/economics/news.rss', 'FedPress': 'https://www.federalreserve.gov/feeds/press_all.xml',
  'GN-Fed/Trump': Q('Fed OR Powell OR Waller OR Trump OR Iran OR Treasury when:1h'),
  'GN-Mercado': Q('stocks OR Nasdaq OR "Wall Street" OR yields OR oil when:1h'),
  'GN-Chips': Q('Nvidia OR Micron OR semiconductor OR chip stocks when:1h'),
@@ -42,7 +42,7 @@ while True:
             if k in vistos: continue
             vistos.add(k)
             idade = (agora - p).total_seconds() / 60
-            if not primeira and idade <= 40 and KW.search(ti):
+            if not primeira and idade <= 40 and (KW.search(ti) or (re.search(r'trump', ti, re.I) and re.search(r'tariff|iran|china|fed|rate|oil|sanction|war|strike|tax|trade', ti, re.I))):
                 print(f"{p.astimezone(BRT):%H:%M} BRT [{nome}] {ti[:150]} (publicado ha {idade:.0f} min)")
     primeira = False
     time.sleep(45)

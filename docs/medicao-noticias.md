@@ -12,3 +12,9 @@ Script: `scripts/medir_noticias.py` (so biblioteca padrao). Fontes (8): Fed pres
 ## Decisao pendente
 Com o relatorio de 08/10: se alguma fonte gratuita chega em <= 5 min das demais, montar `scripts/noticias.py` (checagem incremental) ligado ao briefing; so entao avaliar o Fincept (testar no outro PC).
 - noticias_monitor.py (Monitor): consulta a cada 45 s; filtro de palavras-chave precisa ser mais estrito (Trump politico gera ruido).
+
+## Primeiro achado real (08/10/2026): spike das 13:17 BRT x manchete
+- Spike: UMA vela M1 (13:17 BRT, +113 pts no NAS100; US500 +23,6 pts no mesmo minuto, volume 2x).
+- Manchete "Trump diz que os EUA nao atacarao o Ira antes das eleicoes": **Bloomberg (feed RSS publico politics/news.rss) 13:24 BRT**; Google News agregou 13:24-13:37; CNBC 13:53; Reuters sancoes 13:59. Ou seja, o MERCADO MEXEU ~7 min ANTES da manchete mais cedo que achei. Nenhuma fonte gratuita chegou antes do preco.
+- Bloomberg tem RSS publico GRATIS: feeds.bloomberg.com/{markets,politics,economics,technology}/news.rss (segue 301 para bloomberg.com/feeds/...). Lista curada (~20 itens, nao e o fluxo completo do terminal). Adicionado ao scripts/noticias_monitor.py.
+- Conclusao parcial: o noticiario gratuito serve como CONTEXTO/CONFIRMACAO (explica o movimento minutos depois), nao como gatilho antecipado.
