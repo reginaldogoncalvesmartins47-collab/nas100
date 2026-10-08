@@ -27,6 +27,16 @@ Mais: `calendar_db.py gate` (LIBERADO?), proximo evento (tabela do dia), Seeking
 | 14 | Posicao | ja existe posicao no mesmo lado? oposta? | duplicar o mesmo lado |
 | 15 | Hora | falta quanto para 17:55 TV? | menos de 15 min (salvo evento) |
 
+## 2b. PERGUNTAS que o Claude se faz ANTES de entrar (sem a usuaria pedir; responder por escrito)
+1. O que o MERCADO esta fazendo agora (fase: tendencia, correcao, varredura de liquidez, lateral)? Entrar a favor dessa fase ou contra?
+2. Em que fase do dia/sessao estou (primeiros 15 min de NY, almoco, Asia fina)? Essa hora tem movimento confiavel?
+3. O que precisa ser verdade para essa entrada dar certo? E o que a INVALIDA (preco e hora)?
+4. Quanto espaco livre existe ate o proximo obstaculo em relacao ao ATR? Cabe o stop ESTRUTURAL?
+5. Estou entrando por analise ou por vontade de recuperar/operar? (nao entrar por impulso)
+6. Ja existe base estatistica? Rodar `bash scripts/edge.sh query "..." --symbol USATECH` com a condicao parecida e olhar N e IC: **N < 30 = anedota, sem vantagem; IC que inclui 50% = sem vantagem**. Dizer o numero na decisao.
+7. Estou em duvida sobre um conceito (OB, FVG, BOS, sweep)? Consultar a Biblioteca do LuxAlgo MCP (library_search / library_get_concept) em vez de usar de memoria.
+8. O que a zona/nota do Structure VP + SMC diz E o que o backtest diz dela: **sem vantagem comprovada (docs/estudo-zonas-pinets.md)**; a zona e checklist, nunca motivo de entrada sozinha.
+
 ## 3. Decisao (escrever em 3 linhas)
 - **Lado e por que** (as 3 razoes mais fortes).
 - **O que esta contra** e por que a entrada vale mesmo assim (ou "nao entra").
