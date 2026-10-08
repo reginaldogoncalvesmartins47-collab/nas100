@@ -11,3 +11,4 @@ Script: `scripts/medir_noticias.py` (so biblioteca padrao). Fontes (8): Fed pres
 - O PC precisa ficar ligado durante a coleta; o processo some se o Claude/terminal fechar (recomecar o comando).
 ## Decisao pendente
 Com o relatorio de 08/10: se alguma fonte gratuita chega em <= 5 min das demais, montar `scripts/noticias.py` (checagem incremental) ligado ao briefing; so entao avaliar o Fincept (testar no outro PC).
+- noticias_monitor.py (Monitor): consulta a cada 45 s; filtro de palavras-chave precisa ser mais estrito (Trump politico gera ruido).
