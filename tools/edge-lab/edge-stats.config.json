@@ -1,0 +1,57 @@
+{
+  "dataDir": ".edge-stats",
+  "minN": {
+    "warn": 30,
+    "refuse": 10
+  },
+  "recencyWindow": 250,
+  "serve": {
+    "port": 3343,
+    "host": "127.0.0.1"
+  },
+  "symbols": [
+    {
+      "symbol": "NAS100",
+      "adapter": "csv",
+      "assetClass": "future",
+      "tf": "1m",
+      "orWindows": [
+        5,
+        15,
+        30,
+        60
+      ],
+      "ibWindow": 60,
+      "adapterOptions": {
+        "path": "bars/",
+        "delimiter": ",",
+        "tsUnit": "iso",
+        "mapping": {
+          "ts": "timestamp",
+          "open": "open",
+          "high": "high",
+          "low": "low",
+          "close": "close",
+          "volume": "volume"
+        }
+      }
+    },
+    {
+      "symbol": "USATECH",
+      "adapter": "dukascopy",
+      "assetClass": "future",
+      "tf": "1m",
+      "orWindows": [
+        5,
+        15,
+        30,
+        60
+      ],
+      "ibWindow": 60,
+      "adapterOptions": {
+        "instrument": "usatechidxusd",
+        "start": "2024-10-01"
+      }
+    }
+  ]
+}
