@@ -119,3 +119,6 @@ Apertar o stop e PERMITIDO e obrigatorio (so afastar e proibido). A cada disparo
 | >= 75% do caminho | travar 50% |
 | antes de evento (T-5 de outro evento) com lucro >= 30 pts | travar >= 50% do ganho |
 Depois de apertar: registrar no diario (stop novo, motivo). Caso 08/10: venda 31.044,3, a usuaria apertou o stop para 31.014,7 e a saida deu +28,6 pts; o Claude estava so olhando.
+
+## ACOMPANHAMENTO DE 1 EM 1 MINUTO COM POSICAO ABERTA (usuaria, 08/10/2026)
+Enquanto houver posicao do Claude aberta: criar um CronCreate `* * * * *` (1 min) "VIGIA DE POSICAO" logo apos a ordem confirmada; a cada disparo: ver preco/velas M1 (pode trocar o grafico para M1 e voltar a M5 depois), aplicar os degraus de protecao (modificar a ordem de stop no gerenciador da conta: Ordens -> lapis -> Confirmar) e checar invalidacao; quando a posicao fechar, CronDelete desse job e registrar no diario. Sem posicao = nenhum cron de 1 min ligado (custa uso do plano).
