@@ -109,3 +109,13 @@ Objetivo: nao devolver o que ja ganhamos (ex.: ISM devolveu 50% em minutos). Num
 **6) ALVO MAIOR (usuaria, 01/10/2026: "aumentar o take"):** em trade de noticia, o alvo nao e o nivel mais proximo, e o PROXIMO NIVEL RELEVANTE (Fibo/POC/liquidez em H1) ou, no minimo, 1,5x o risco do stop. Para alvo maior valer a pena, compensa com protecao: degraus do item 2 (zero a zero a +50% do caminho, travar ~40% a +75%) e item 5 (stop positivo antes de esticar). O custo e aceito: a taxa de acerto do alvo cheio cai; por isso o placar registra MFE (quanto andou a favor) e quanto devolveu, para calibrar o tamanho do alvo com dados (ver ~20 eventos).
 
 **7) FECHAR ANTES DAS 18:00 (usuaria, 01/10/2026):** toda posicao fecha as 17:55 (relogio do TradingView), a mercado, antes do fechamento das 18:00. Vale para qualquer trade, no lucro ou no prejuizo. O mercado reabre as 19:00 (Asia abre as 21:00): entradas depois das 19:00, como o Logan 19:45, estao liberadas.
+
+## PROTECAO AUTOMATICA (usuaria, 08/10/2026: "voce deve proteger a posicao sempre") - vale para TODO trade do Claude
+Apertar o stop e PERMITIDO e obrigatorio (so afastar e proibido). A cada disparo do vigia (5 min), com posicao aberta, aplicar o degrau e MODIFICAR a ordem de stop no Paper Trading (aba Ordens/Posicoes do gerenciador da conta ou arrastar a linha), nao so "anotar":
+| lucro aberto | acao no stop |
+|---|---|
+| >= 1 ATR M5 (~25 pts) | levar para 0x0 (preco de entrada, +/- 2 pts de spread) |
+| >= 50% do caminho ao alvo | travar 25% do ganho (stop em entrada -/+ 25% da distancia ao preco atual) |
+| >= 75% do caminho | travar 50% |
+| antes de evento (T-5 de outro evento) com lucro >= 30 pts | travar >= 50% do ganho |
+Depois de apertar: registrar no diario (stop novo, motivo). Caso 08/10: venda 31.044,3, a usuaria apertou o stop para 31.014,7 e a saida deu +28,6 pts; o Claude estava so olhando.
