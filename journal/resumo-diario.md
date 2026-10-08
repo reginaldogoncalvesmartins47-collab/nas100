@@ -133,3 +133,17 @@ Proposta para a usuaria decidir: tirar da 'regra inquebravel' os eventos de fala
 ## 07/10/2026 (quarta)
 Saldo inicial do dia: US$ 40.139,92 (paper). Madrugada (regra: das 21:00 as 18:00 sempre vale operar).
 **07/10 00:49 TV** Trade 24 aberto: VENDA a mercado 0,1 @31.248,1 (stop 31.262, alvo 31.200, risco ~US$ 1,39, R:R 2,9). MOTIVO: seguir o fluxo (pedido da usuaria) em vez de esperar o toque na oferta. Estrutura SMC: CHoCH de baixa, Strong High 31.293,1 (invalidacao), Weak Low 31.203,1 (alvo). Painel: regime M15 BAIXA, Brent +0,48% e juros +1,1 pb a favor. Momentum: M5 estocastico virando de 74 e MACD esgotando; M15 com divergencia de baixa. Wyckoff: repique em volume decrescente. Elliott: ABC de queda terminado, repique de correcao (61,8% 31.256 / 78,6% 31.271 / oferta 31.265-31.283). Estudo: tendencia M15 a favor sobe o acerto de 40,6% para 45,4%. Stop 1,3 ATR M5 acima da ultima maxima. Calendario completo do Investing NAO capturado (extensao do Chrome desconectada): recaptura as 08:03.
+
+## 08/10/2026 (quinta) - Claude no Paper Trading (conta nayaramarinhomartins, lote 0,1)
+Saldo inicial do dia (antes do 1o trade do Claude): US$ 106.814,79. Saldo final (ultimo trade): US$ 106.827,73. **Resultado dos trades do Claude: +US$ 12,94 (5 trades, 4 ganhos, 1 perda).** (Correcao: o placar dito no chat, +9,93, omitia o trade das 11:56.)
+| # | hora | lado | entrada | saida | resultado | observacao |
+|---|---|---|---|---|---|---|
+| 25 | 11:20 | venda | 31.065,6 | 31.072,1 | -0,65 | stop de 6 pts (curto demais), sem gatilho fechado, entrada por ordem da usuaria |
+| 26 | 11:56 | venda | 31.044,3 | 31.015,7 | +2,86 | stop apertado PELA USUARIA para 31.014,7 (Claude nao protegeu) |
+| 27 | 12:24 | venda (T-5 GDPNow) | 31.003,7 | 30.980,4 | +2,33 | degraus: 31.045 -> 31.002 -> 30.992 -> 30.980 (apertado com atraso) |
+| 28 | 13:49 | venda | 30.851,6 | 30.842,9 | +0,87 | stop apertado pela usuaria para 30.841,3 (10 pts, ruido) |
+| 29 | 13:54 | venda (T-5 leilao Bond 30a) | 30.774,5 | 30.699,2 | +7,53 | ALVO; stop 30.850 -> 30.748 aos +56 pts; vigia de 1 min |
+Eventos x entradas: Waller 05:30 (PERDIDO: vigia nao disparou 01:15-09:30), seguro-desemprego 09:30 (PERDIDO), atacado 11:00 (perdido: Paper Trading desconectado), GDPNow 12:30 (entrada 12:24), leilao Bond 30a 14:00 (entrada 13:54), balanco do Fed 17:30 (nao ocorreu ate o fim desta sessao).
+Vetos: 2 (00:52 compra vetada: acertou aos 15 min; 13:25 venda apos rejeicao de 78 pts: vetada por macro/R:R).
+Licoes: (1) stop de ATR/folga de spike por sessao (docs/gestao-saida.md); (2) protecao em degraus aplicada de verdade; (3) acompanhar de 1 em 1 min com posicao; (4) vigia e monitor de noticias precisam ligar no INICIO da sessao; (5) spike de 13:17 foi noticia de Trump/Ira (Bloomberg RSS 13:24, 7 min DEPOIS do preco).
+Pendencias: balanco do Fed 17:30; registrar o resultado dos vetos (60 min); medicao de atraso das fontes de noticia (docs/medicao-noticias.md); estudo do Structure em PineTS (docs/estudo-zonas-pinets.md); GEX so conclui com >= 20 dias (scripts/gex_teste.py).
