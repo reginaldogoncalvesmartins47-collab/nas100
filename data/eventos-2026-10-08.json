@@ -1,0 +1,13 @@
+[{"date":"2026-10-08","time_brt":"05:30","country":"US","event":"Discurso de Waller (Fed)","stars":2,"source":"investing"},
+{"date":"2026-10-08","time_brt":"09:30","country":"US","event":"Pedidos Iniciais por Seguro-Desemprego","stars":3,"forecast":"200K","previous":"197K","source":"investing (atual nao capturado)"},
+{"date":"2026-10-08","time_brt":"09:30","country":"US","event":"Pedidos Continuos por Seguro-Desemprego","stars":2,"forecast":"1.710K","previous":"1.701K","source":"investing (atual nao capturado)"},
+{"date":"2026-10-08","time_brt":"09:30","country":"US","event":"Media de Pedidos de Seguro-Desemprego (4 Semanas)","stars":1,"forecast":"200K","source":"investing"},
+{"date":"2026-10-08","time_brt":"11:00","country":"US","event":"Vendas no Atacado (Mensal) (Ago)","stars":1,"forecast":"0,8%","source":"investing"},
+{"date":"2026-10-08","time_brt":"11:00","country":"US","event":"Estoques no Atacado (Mensal) (Ago)","stars":1,"forecast":"0,7%","previous":"1,3%","source":"investing"},
+{"date":"2026-10-08","time_brt":"11:30","country":"US","event":"Estoque de Gas Natural","stars":1,"forecast":"79B","previous":"64B","source":"investing"},
+{"date":"2026-10-08","time_brt":"12:30","country":"US","event":"GDPNow do Fed de Atlanta (T3)","stars":2,"forecast":"3,7%","previous":"3,7%","source":"investing"},
+{"date":"2026-10-08","time_brt":"12:30","country":"US","event":"Leilao Americano Bill a 4 semanas","stars":1,"previous":"3,890%","source":"investing"},
+{"date":"2026-10-08","time_brt":"12:30","country":"US","event":"Leilao Americano Bill a 8 semanas","stars":1,"previous":"3,990%","source":"investing"},
+{"date":"2026-10-08","time_brt":"14:00","country":"US","event":"Leilao Americano Bond a 30 anos","stars":2,"previous":"5,308%","source":"investing"},
+{"date":"2026-10-08","time_brt":"17:30","country":"US","event":"Balanco Patrimonial do Federal Reserve","stars":3,"previous":"6.743B","source":"investing"},
+{"date":"2026-10-08","time_brt":"17:30","country":"US","event":"Saldos de reservas com bancos do Federal Reserve","stars":1,"previous":"2,881T","source":"investing"}]

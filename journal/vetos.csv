@@ -1,1 +1,2 @@
 data,hora_brt,lado_que_ia_entrar,preco,item_que_vetou,motivo,preco_15min_depois,preco_60min_depois,veto_acertou(sim/nao/incerto)
+2026-10-08,00:52,COMPRA,31146.8,1 gate; 9 estrutura M5 BAIXA sem CHoCH de alta; 11 sem rejeicao fechada,OB demanda 31114-31147 tocada no topo; ultima vela M5 fechada 00:45 sem pavio (0.6); R:R ~1.1-1.3 ate OTE/oferta,31131.3 (01:08; -15.5),,sim (15min; falta 60min)
