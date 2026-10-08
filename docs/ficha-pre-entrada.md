@@ -37,6 +37,9 @@ Mais: `calendar_db.py gate` (LIBERADO?), proximo evento (tabela do dia), Seeking
 7. Estou em duvida sobre um conceito (OB, FVG, BOS, sweep)? Consultar a Biblioteca do LuxAlgo MCP (library_search / library_get_concept) em vez de usar de memoria.
 8. O que a zona/nota do Structure VP + SMC diz E o que o backtest diz dela: **sem vantagem comprovada (docs/estudo-zonas-pinets.md)**; a zona e checklist, nunca motivo de entrada sozinha.
 
+## 2c. REGISTRO DE VETOS (usuaria, 08/10/2026: "vc vai ficar com medo de entrar?")
+Toda vez que a ficha VETAR uma entrada que eu faria (ou que a regra manda fazer), gravar uma linha em `journal/vetos.csv`: data, hora BRT, lado, preco, item que vetou (numero da ficha), motivo, e DEPOIS preencher o preco 15 e 60 min depois e se o veto acertou (preco foi contra o lado = acertou; foi a favor = errou). Entrada obrigatoria de evento (T-5) nao pode ser vetada por conforto: so por stop impossivel/gate bloqueado/posicao ja no lado. Revisao semanal: `python -I scripts/vetos_resumo.py` (taxa de acerto dos vetos por item). Se um item erra > 60% (N >= 20), propor afrouxar; nunca afrouxar stop, gate ou limites de capital.
+
 ## 3. Decisao (escrever em 3 linhas)
 - **Lado e por que** (as 3 razoes mais fortes).
 - **O que esta contra** e por que a entrada vale mesmo assim (ou "nao entra").
