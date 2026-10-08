@@ -1,5 +1,5 @@
 """Monitor de noticias (usuaria, 08/10/2026: 'o certo era ter um webhook que te avisa de noticias').
-Sem webhook gratis de Bloomberg/Reuters, faz POLLING a cada 45 s de: Fed press RSS, Seeking Alpha market-news, Google News RSS (varias buscas),
+Sem webhook gratis de Bloomberg/Reuters, faz POLLING a cada 30 s de: Fed press RSS, Seeking Alpha market-news, Google News RSS (varias buscas),
 e imprime 1 linha por manchete NOVA que case com palavras-chave de mercado e tenha sido publicada nos ultimos 40 min. Uso com a ferramenta Monitor:
   python -u scripts/noticias_monitor.py
 Linha: 'HH:MM BRT [fonte] titulo (publicado ha N min)'. A 1a rodada so memoriza (nao imprime). So biblioteca padrao."""
@@ -45,4 +45,4 @@ while True:
             if not primeira and idade <= 40 and (KW.search(ti) or (re.search(r'trump', ti, re.I) and re.search(r'tariff|iran|china|fed|rate|oil|sanction|war|strike|tax|trade', ti, re.I))):
                 print(f"{p.astimezone(BRT):%H:%M} BRT [{nome}] {ti[:150]} (publicado ha {idade:.0f} min)")
     primeira = False
-    time.sleep(45)
+    time.sleep(30)
